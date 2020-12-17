@@ -1,9 +1,6 @@
-import sql from 'node-sql-parser'
 import { sha256 as hasher } from 'multiformats/hashes/sha2'
 import * as codec from '@ipld/dag-cbor'
 import { encode as encoder, decode as decoder } from 'multiformats/block'
-import { create as createSparseArray, load as loadSparseArray } from 'chunky-trees/sparse-array'
-import { create as createDBIndex, load as loadDBIndex } from 'chunky-trees/db-index'
 
 const mf = { codec, hasher }
 
@@ -22,3 +19,18 @@ const getNode = async (cid, get, cache, create) => {
   return node
 }
 
+class SQLBase {
+  constructor ({ block }) {
+    this.block = block || this.encode()
+    this.address = this.block.then ? this.block.then(b => b.cid) : this.block.cid
+  }
+
+  async encode () {
+    if (this.block) return this.block
+    await immediate()
+    const node = await this.encodeNode()
+    return encode(node)
+  }
+}
+
+export { immediate, getNode, mf, encode, decode, hasher, codec, SQLBase }

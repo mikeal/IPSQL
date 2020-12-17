@@ -1,5 +1,5 @@
 /* globals describe, it */
-import { sql, Database } from '../src/index.js'
+import { sql, Database } from '../src/database.js'
 import { nocache } from 'chunky-trees/cache'
 import { deepStrictEqual as same } from 'assert'
 import { bf } from 'chunky-trees/utils'
