@@ -1,12 +1,28 @@
 import { CID } from 'multiformats'
 import { Database } from './database.js'
 import { nocache } from 'chunky-trees/cache'
-import { bf, createBlock } from './utils.js'
+import { createBlock } from './utils.js'
+import { bf } from 'chunky-trees/utils'
 
 const immutable = (obj, props) => {
   for (const [key, value] of Object.entries(props)) {
     Object.defineProperty(obj, key, { value, writable: false, enumerable: true })
   }
+}
+
+const defaults = { cache: nocache, chunker: bf(256) }
+
+const ipfsStore = ipfs => {
+  const get = async cid => {
+    const { data } = await ipfs.block.get(cid.toString())
+    return createBlock(data, cid)
+  }
+  const put = async block => {
+    const opts = { cid: block.cid.toString() }
+    await ipfs.block.put(block.bytes, opts)
+    return true
+  }
+  return { get, put }
 }
 
 class IPSQL {
@@ -21,16 +37,17 @@ class IPSQL {
   }
 
   async write (q) {
-    const iter = this.db.sql(q, { chunker: this.chunker })
+    const iter = this.db.sql(q, { chunker: this.db.chunker })
 
     let last
     for await (const block of iter) {
       await this.putBlock(block)
       last = block
     }
-    const opts = { get: this.getBlock, cache: this.db.cache, chunker: this.db.chunker }
+    const { getBlock: get, putBlock: put } = this
+    const opts = { get, cache: this.db.cache, chunker: this.db.chunker }
     const db = await Database.from(last.cid, opts)
-    return new IPSQL({ ...this, db, root: last.cid })
+    return new IPSQL({ get, put, db, cid: last.cid })
   }
 
   async read (q) {
@@ -39,29 +56,24 @@ class IPSQL {
     return all
   }
 
-  static create (opts) {
-    return new IPSQL({ ...opts, db: Database.create() })
+  static create (q, opts) {
+    opts.cache = opts.cache || defaults.cache
+    opts.chunker = opts.chunker || defaults.chunker
+    const db = new IPSQL({ ...opts, db: Database.create(opts) })
+    return db.write(q)
   }
 
   static async from (cid, { ipfs, get, put, cache, chunker }) {
     if (typeof cid === 'string') cid = CID.parse(cid)
     if (ipfs) {
-      get = async cid => {
-        const { data } = await ipfs.block.get(cid.toString())
-        return createBlock(data, cid)
-      }
-      put = async block => {
-        const opts = { cid: block.cid.toString() }
-        await ipfs.block.put(block.bytes, opts)
-        return true
-      }
+      const store = ipfsStore(ipfs)
+      get = store.get
+      put = store.put
     }
-    const opts = { get, cache: cache || nocache, chunker: chunker || bf(256) }
+    const opts = { get, cache: cache || defaults.cache, chunker: chunker || defaults.chunker }
     const db = await Database.from(cid, opts)
     return new IPSQL({ ...opts, put, db, cid })
   }
 }
 
-const { from, create } = IPSQL
-
-export { from, create, IPSQL }
+export default IPSQL

@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@ipld/dag-cbor": "^2.0.3",
-    "chunky-trees": "^0.2.0",
+    "chunky-trees": "^0.3.0",
     "multiformats": "^4.4.1"
   }
 }

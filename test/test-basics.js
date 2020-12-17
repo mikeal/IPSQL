@@ -1,4 +1,5 @@
 /* globals describe, it */
+import IPSQL from '../src/index.js'
 import { sql, Database } from '../src/database.js'
 import { nocache } from 'chunky-trees/cache'
 import { deepStrictEqual as same } from 'assert'
@@ -93,6 +94,11 @@ const verifyPersonTable = table => {
   }
 }
 
+const create = q => {
+  const { get, put } = storage()
+  return IPSQL.create(q, { get, put, chunker })
+}
+
 describe('sql', () => {
   it('basic create', async () => {
     const { database: db } = await runSQL(createPersons)
@@ -124,10 +130,9 @@ describe('sql', () => {
   const onlySecondRow = [[13, 'Rogers', 'NotMikeal', '241 AVB', 'San Francisco']]
 
   it('select all columns', async () => {
-    const { database, store } = await runSQL(createPersons)
-    const { database: db } = await runSQL(insertFullRow, database, store)
-    const result = db.sql('SELECT * FROM Persons')
-    const all = await result.all()
+    let ipsql = await create(createPersons)
+    ipsql = await ipsql.write(insertFullRow)
+    const all = await ipsql.read('SELECT * FROM Persons')
     same(all, onlyFirstRow)
   })
 
@@ -150,133 +155,105 @@ describe('sql', () => {
   })
 
   it('select two columns', async () => {
-    const { database, store } = await runSQL(createPersons)
-    const { database: db } = await runSQL(insertFullRow, database, store)
-    const result = db.sql('SELECT FirstName, LastName FROM Persons')
-    const all = await result.all()
+    let ipsql = await create(createPersons)
+    ipsql = await ipsql.write(insertFullRow)
+    const all = await ipsql.read('SELECT FirstName, LastName FROM Persons')
     same(all, [['Mikeal', 'Rogers']])
   })
 
   it('select * where (string comparison)', async () => {
-    const { database, store } = await runSQL(createPersons)
-    const { database: db } = await runSQL(insertTwoRows, database, store)
-    let result = db.sql('SELECT * FROM Persons WHERE FirstName="Mikeal"')
-    let all = await result.all()
+    let ipsql = await create(createPersons)
+    ipsql = await ipsql.write(insertTwoRows)
+    let all = await ipsql.read('SELECT * FROM Persons WHERE FirstName="Mikeal"')
     same(all, onlyFirstRow)
-    result = db.sql('SELECT * FROM Persons WHERE FirstName="NotMikeal"')
-    all = await result.all()
+    all = await ipsql.read('SELECT * FROM Persons WHERE FirstName="NotMikeal"')
     same(all, onlySecondRow)
   })
 
   it('select * where (string comparison AND)', async () => {
-    const { database, store } = await runSQL(createPersons)
-    const { database: db } = await runSQL(insertTwoRows, database, store)
-    let result = db.sql('SELECT * FROM Persons WHERE FirstName="Mikeal" AND LastName="Rogers"')
-    let all = await result.all()
+    let ipsql = await create(createPersons)
+    ipsql = await ipsql.write(insertTwoRows)
+    let all = await ipsql.read('SELECT * FROM Persons WHERE FirstName="Mikeal" AND LastName="Rogers"')
     same(all, onlyFirstRow)
-    result = db.sql('SELECT * FROM Persons WHERE FirstName="NotMikeal" AND LastName="Rogers"')
-    all = await result.all()
+    all = await ipsql.read('SELECT * FROM Persons WHERE FirstName="NotMikeal" AND LastName="Rogers"')
     same(all, onlySecondRow)
-    result = db.sql('SELECT * FROM Persons WHERE FirstName="Mikeal" AND LastName="NotRogers"')
-    all = await result.all()
+    all = await ipsql.read('SELECT * FROM Persons WHERE FirstName="Mikeal" AND LastName="NotRogers"')
     same(all, [])
-    result = db.sql('SELECT * FROM Persons WHERE FirstName="NotMikeal" AND LastName="NotRogers"')
-    all = await result.all()
+    all = await ipsql.read('SELECT * FROM Persons WHERE FirstName="NotMikeal" AND LastName="NotRogers"')
     same(all, [])
   })
 
   it('select * where (string comparison OR)', async () => {
-    const { database, store } = await runSQL(createPersons)
-    const { database: db } = await runSQL(insertTwoRows, database, store)
-    let result = db.sql('SELECT * FROM Persons WHERE FirstName="Mikeal" OR LastName="NotRogers"')
-    let all = await result.all()
+    let ipsql = await create(createPersons)
+    ipsql = await ipsql.write(insertTwoRows)
+    let all = await ipsql.read('SELECT * FROM Persons WHERE FirstName="Mikeal" OR LastName="NotRogers"')
     same(all, onlyFirstRow)
-    result = db.sql('SELECT * FROM Persons WHERE FirstName="NotMikeal" OR LastName="NotRogers"')
-    all = await result.all()
+    all = await ipsql.read('SELECT * FROM Persons WHERE FirstName="NotMikeal" OR LastName="NotRogers"')
     same(all, onlySecondRow)
-    result = db.sql('SELECT * FROM Persons WHERE FirstName="XMikeal" OR LastName="XRogers"')
-    all = await result.all()
+    all = await ipsql.read('SELECT * FROM Persons WHERE FirstName="XMikeal" OR LastName="XRogers"')
     same(all, [])
   })
 
   it('select * where (string comparison AND 3x)', async () => {
-    const { database, store } = await runSQL(createPersons)
-    const { database: db } = await runSQL(insertTwoRows, database, store)
+    let ipsql = await create(createPersons)
+    ipsql = await ipsql.write(insertTwoRows)
     const pre = 'SELECT * FROM Persons WHERE '
-    let result = db.sql(pre + 'FirstName="Mikeal" AND LastName="Rogers" AND City="San Francisco"')
-    let all = await result.all()
+    let all = await ipsql.read(pre + 'FirstName="Mikeal" AND LastName="Rogers" AND City="San Francisco"')
     same(all, onlyFirstRow)
-    result = db.sql(pre + 'FirstName="NotMikeal" AND LastName="Rogers" AND City="San Francisco"')
-    all = await result.all()
+    all = await ipsql.read(pre + 'FirstName="NotMikeal" AND LastName="Rogers" AND City="San Francisco"')
     same(all, onlySecondRow)
-    result = db.sql(pre + 'FirstName="XMikeal" OR LastName="XRogers"')
-    all = await result.all()
+    all = await ipsql.read(pre + 'FirstName="XMikeal" OR LastName="XRogers"')
     same(all, [])
   })
 
   it('select * where (string comparison OR 3x)', async () => {
-    const { database, store } = await runSQL(createPersons)
-    const { database: db } = await runSQL(insertTwoRows, database, store)
+    let ipsql = await create(createPersons)
+    ipsql = await ipsql.write(insertTwoRows)
     const pre = 'SELECT * FROM Persons WHERE '
-    let result = db.sql(pre + 'FirstName="X" OR LastName="X" OR City="San Francisco"')
-    let all = await result.all()
+    let all = await ipsql.read(pre + 'FirstName="X" OR LastName="X" OR City="San Francisco"')
     same(all, twoRowExpected)
-    result = db.sql(pre + 'FirstName="X" OR LastName="X" OR City="San Francisco"')
-    all = await result.all()
+    all = await ipsql.read(pre + 'FirstName="X" OR LastName="X" OR City="San Francisco"')
     same(all, twoRowExpected)
-    result = db.sql(pre + 'FirstName="XMikeal" OR LastName="XRogers" OR City="X"')
-    all = await result.all()
+    all = await ipsql.read(pre + 'FirstName="XMikeal" OR LastName="XRogers" OR City="X"')
     same(all, [])
   })
 
   it('select * where (int ranges)', async () => {
-    const create = 'CREATE TABLE Test ( ID int )'
-    const { database, store } = await runSQL(create)
+    let ipsql = await create('CREATE TABLE Test ( ID int )')
     const values = [...Array(10).keys()].map(k => `(${k})`).join(', ')
-    const inserts = `INSERT INTO Test VALUES ${values}`
-    const { database: db } = await runSQL(inserts, database, store)
+    ipsql = await ipsql.write(`INSERT INTO Test VALUES ${values}`)
     const pre = 'SELECT * FROM Test WHERE '
-    let result = db.sql(pre + 'ID > 1 AND ID < 3')
-    let all = await result.all()
+    let all = await ipsql.read(pre + 'ID > 1 AND ID < 3')
     same(all, [[2]])
-    result = db.sql(pre + 'ID >= 2 AND ID <= 3')
-    all = await result.all()
+    all = await ipsql.read(pre + 'ID >= 2 AND ID <= 3')
     same(all, [[2], [3]])
   })
 
   it('select * where (string ranges)', async () => {
-    const create = 'CREATE TABLE Test ( Name varchar(255) )'
-    const { database, store } = await runSQL(create)
+    let ipsql = await create('CREATE TABLE Test ( Name varchar(255) )')
     const values = ['a', 'b', 'c', 'd', 'e', 'f'].map(k => `("${k}")`).join(', ')
     const inserts = `INSERT INTO Test VALUES ${values}`
-    const { database: db } = await runSQL(inserts, database, store)
+    ipsql = await ipsql.write(inserts)
     const pre = 'SELECT * FROM Test WHERE '
-    let result = db.sql(pre + 'Name > "a" AND Name < "c"')
-    let all = await result.all()
+    let all = await ipsql.read(pre + 'Name > "a" AND Name < "c"')
     same(all, [['b']])
-    result = db.sql(pre + 'Name >= "b" AND Name <= "d"')
-    all = await result.all()
+    all = await ipsql.read(pre + 'Name >= "b" AND Name <= "d"')
     same(all, [['b'], ['c'], ['d']])
   })
 
   it('select * where (int range operators)', async () => {
-    const create = 'CREATE TABLE Test ( ID int )'
-    const { database, store } = await runSQL(create)
+    let ipsql = await create('CREATE TABLE Test ( ID int )')
     const values = [...Array(10).keys()].map(k => `(${k})`).join(', ')
     const inserts = `INSERT INTO Test VALUES ${values}`
-    const { database: db } = await runSQL(inserts, database, store)
+    ipsql = await ipsql.write(inserts)
     const pre = 'SELECT * FROM Test WHERE '
-    let result = db.sql(pre + 'ID < 3')
-    let all = await result.all()
+    let all = await ipsql.read(pre + 'ID < 3')
     same(all, [[0], [1], [2]])
-    result = db.sql(pre + 'ID > 8')
-    all = await result.all()
+    all = await ipsql.read(pre + 'ID > 8')
     same(all, [[9]])
-    result = db.sql(pre + 'ID <= 2')
-    all = await result.all()
+    all = await ipsql.read(pre + 'ID <= 2')
     same(all, [[0], [1], [2]])
-    result = db.sql(pre + 'ID >= 9')
-    all = await result.all()
+    all = await ipsql.read(pre + 'ID >= 9')
     same(all, [[9]])
   })
 
@@ -302,38 +279,32 @@ describe('sql', () => {
   })
 
   it('select * where (ORDER BY int)', async () => {
-    const create = 'CREATE TABLE Test ( Name varchar(255), Id int )'
-    const { database, store } = await runSQL(create)
+    let ipsql = await create('CREATE TABLE Test ( Name varchar(255), Id int )')
     let i = 0
     const values = ['a', 'b', 'c', 'd', 'e', 'f'].reverse().map(k => `("${k}", ${i++})`).join(', ')
     const inserts = `INSERT INTO Test VALUES ${values}`
-    const { database: db } = await runSQL(inserts, database, store)
+    ipsql = await ipsql.write(inserts)
     const pre = 'SELECT * FROM Test WHERE '
     const query = pre + 'Name > "a" AND Name < "f" ORDER BY Id'
-    let result = db.sql(query)
-    let all = await result.all()
+    let all = await ipsql.read(query)
     const expected = [['e', 1], ['d', 2], ['c', 3], ['b', 4]]
     same(all, expected)
-    result = db.sql(query + ' DESC')
-    all = await result.all()
+    all = await ipsql.read(query + ' DESC')
     same(all, expected.reverse())
   })
 
   it('select * where (ORDER BY string)', async () => {
-    const create = 'CREATE TABLE Test ( Name varchar(255), Id int )'
-    const { database, store } = await runSQL(create)
+    let ipsql = await create('CREATE TABLE Test ( Name varchar(255), Id int )')
     let i = 0
     const values = ['a', 'b', 'c', 'd', 'e', 'f'].reverse().map(k => `("${k}", ${i++})`).join(', ')
     const inserts = `INSERT INTO Test VALUES ${values}`
-    const { database: db } = await runSQL(inserts, database, store)
+    ipsql = await ipsql.write(inserts)
     const pre = 'SELECT * FROM Test WHERE '
     const query = pre + 'Id > 1 AND Id < 5 ORDER BY Name'
-    let result = db.sql(query)
-    let all = await result.all()
+    let all = await ipsql.read(query)
     const expected = [['b', 4], ['c', 3], ['d', 2]]
     same(all, expected)
-    result = db.sql(query + ' DESC')
-    all = await result.all()
+    all = await ipsql.read(query + ' DESC')
     same(all, expected.reverse())
   })
 })

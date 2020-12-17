@@ -127,7 +127,15 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
     inserts.push({ block, row: _row })
   }
   const opts = { chunker, get, cache, ...mf }
-  if (table.rows === null) {
+
+  if (table.rows !== null) {
+    let i = await table.rows.getLength()
+    const list = inserts.map(({ block: { cid }, row }) => ({ key: i++, value: cid, row }))
+    const { blocks, previous, root: rows } = await table.rows.bulk(list)
+    yield * blocks
+    console.log(previous)
+    throw new Error('Not implemented')
+  } else {
     let i = 1
     const list = inserts.map(({ block: { cid }, row }) => ({ key: i++, value: cid, row }))
     let rows
