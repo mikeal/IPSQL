@@ -1,0 +1,21 @@
+{
+  "name": "IPSQL",
+  "version": "0.0.0",
+  "description": "IPLD Schema",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Mikeal Rogers <mikeal.rogers@gmail.com> (https://www.mikealrogers.com/)",
+  "license": "(Apache-2.0 AND MIT)",
+  "devDependencies": {
+    "mocha": "^8.2.1"
+  },
+  "dependencies": {
+    "@ipld/dag-cbor": "^2.0.3",
+    "chunky-trees": "^0.2.0",
+    "multiformats": "^4.4.1"
+  }
+}
