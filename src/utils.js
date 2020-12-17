@@ -1,11 +1,12 @@
 import { sha256 as hasher } from 'multiformats/hashes/sha2'
 import * as codec from '@ipld/dag-cbor'
-import { encode as encoder, decode as decoder } from 'multiformats/block'
+import { encode as encoder, decode as decoder, create } from 'multiformats/block'
 
 const mf = { codec, hasher }
 
 const encode = value => encoder({ value, ...mf })
 const decode = bytes => decoder({ bytes, ...mf })
+const createBlock = (bytes, cid) => create({ bytes, cid, ...mf })
 
 const immediate = () => new Promise(resolve => setImmediate(resolve))
 
@@ -33,4 +34,4 @@ class SQLBase {
   }
 }
 
-export { immediate, getNode, mf, encode, decode, hasher, codec, SQLBase }
+export { immediate, getNode, mf, encode, decode, hasher, codec, createBlock, SQLBase }

@@ -5,11 +5,12 @@ import { createTable, Table, Where, Row } from './table.js'
 const { entries, fromEntries } = Object
 
 class Database extends SQLBase {
-  constructor ({ tables, get, cache, ...opts }) {
+  constructor ({ tables, get, cache, chunker, ...opts }) {
     super(opts)
     this.get = get
     this.cache = cache
     this.tables = tables
+    this.chunker = chunker
   }
 
   createTable (ast) {
@@ -35,7 +36,7 @@ class Database extends SQLBase {
         return [key, await Table.from(cid, key, { get, cache, chunker })]
       })
       tables = fromEntries(await Promise.all(promises))
-      return new Database({ tables, get, cache, block })
+      return new Database({ tables, get, cache, block, chunker })
     }
     return getNode(cid, get, cache, create)
   }
