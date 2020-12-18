@@ -73,12 +73,15 @@ const runWhere = async function * (select) {
   const tables = select.ast.from.map(({ table }) => select.db.tables[table])
   if (select.ast.where === null) {
     for (const table of tables) {
-      for await (const entry of table.rows.getAllEntries()) {
+      if (!table.rows) continue
+      const iter = await table.rows.getAllEntries()
+      for (const entry of iter) {
         yield { entry, table }
       }
     }
   } else {
     for (const table of tables) {
+      if (!table.rows) continue
       const w = new Where(select.db, select.ast.where, table)
       const results = await w.all()
       yield * results.map(entry => ({ entry, table }))

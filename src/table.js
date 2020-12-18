@@ -53,7 +53,15 @@ class Row {
     return this.block.cid
   }
 
+  allColumnNames () {
+    return this.props.map(column => column.column.column)
+  }
+
   getIndex (i) {
+    if (!Array.isArray(this.value)) {
+      const columnName = this.allColumnNames()[i]
+      return this.value[columnName]
+    }
     return this.value[i]
   }
 
@@ -85,11 +93,14 @@ class Row {
     }
   }
 
-  toArray () {
+  toArray (columns) {
     if (Array.isArray(this.value)) {
       return this.value
     } else {
-      throw new Error('Unsupported')
+      if (!columns) {
+        columns = this.allColumnNames()
+      }
+      return columns.map(name => this.value[name])
     }
   }
 
@@ -106,19 +117,28 @@ class Row {
 }
 
 const tableInsert = async function * (table, ast, { database, chunker }) {
-  if (ast.columns !== null) throw new Error('Not implemented')
   const { get, cache } = database
   const { values } = ast
   const inserts = []
   const schemas = table.columns.map(col => col.schema)
   for (const { type, value } of values) {
-    const row = []
+    let row
+    if (ast.columns) {
+      row = {}
+    } else {
+      row = []
+    }
     if (type !== 'expr_list') throw new Error('Not implemented')
     for (let i = 0; i < value.length; i++) {
       const schema = schemas[i]
       const val = value[i]
       validate(schema, val)
-      row.push(val.value)
+      if (ast.columns) {
+        const columnName = ast.columns[i]
+        row[columnName] = val.value
+      } else {
+        row.push(val.value)
+      }
     }
     const block = await encode(row)
     yield block
@@ -135,7 +155,7 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
   if (table.rows !== null) {
     let i = await table.rows.getLength()
     list = inserts.map(({ block: { cid }, row }) => ({ key: i++, value: cid, row }))
-    const { blocks: __blocks, previous, root } = await table.rows.bulk(list)
+    const { blocks: __blocks, root } = await table.rows.bulk(list)
     rows = root
     yield * __blocks
     writeIndex = async (column, i) => {

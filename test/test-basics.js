@@ -1,30 +1,17 @@
 /* globals describe, it */
-import IPSQL from '../src/index.js'
-import { sql, Database } from '../src/database.js'
+import { Database } from '../src/database.js'
 import { nocache } from 'chunky-trees/cache'
-import { deepStrictEqual as same } from 'assert'
 import { bf } from 'chunky-trees/utils'
 import { SparseArrayLeaf } from 'chunky-trees/sparse-array'
 import { DBIndexLeaf, DBIndexBranch } from 'chunky-trees/db-index'
+
+import { create, same, storage } from './lib.js'
 
 const chunker = bf(3)
 
 const cache = nocache
 
-const { keys, entries } = Object
-
-const storage = () => {
-  const blocks = {}
-  const put = block => {
-    blocks[block.cid.toString()] = block
-  }
-  const get = async cid => {
-    const block = blocks[cid.toString()]
-    if (!block) throw new Error('Not found')
-    return block
-  }
-  return { get, put, blocks }
-}
+const { entries } = Object
 
 const createPersons = `CREATE TABLE Persons (
   PersonID int,
@@ -42,7 +29,7 @@ const createPersons2 = `CREATE TABLE Persons2 (
   City varchar(255)
 )`
 
-const insertOnlyId = 'INSERT INTO Persons (PersonID) VALUES (4006)'
+// const insertOnlyId = 'INSERT INTO Persons (PersonID) VALUES (4006)'
 const insertFullRow = 'INSERT INTO Persons VALUES (12, \'Rogers\', \'Mikeal\', \'241 BVA\', \'San Francisco\')'
 const insertTwoRows = insertFullRow + ', (13, \'Rogers\', \'NotMikeal\', \'241 AVB\', \'San Francisco\')'
 
@@ -92,11 +79,6 @@ const verifyPersonTable = table => {
     same(column.schema.definition.dataType, dataType)
     same(column.schema.definition.length, length)
   }
-}
-
-const create = q => {
-  const { get, put } = storage()
-  return IPSQL.create(q, { get, put, chunker })
 }
 
 describe('basics', () => {
