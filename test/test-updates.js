@@ -24,7 +24,7 @@ describe('updates', () => {
     all = await ipsql.read('SELECT * FROM Test WHERE String = \'a\'')
     same(all, [[11, 'a']])
   })
-  it('insert twice, missing column in first insert', async () => {
+  it('insert twice, missing column in second insert', async () => {
     let ipsql = await create('CREATE TABLE Test (ID int, String varchar(255))')
     ipsql = await ipsql.write('INSERT INTO Test VALUES ( 11, \'a\' )')
     ipsql = await ipsql.write('INSERT INTO Test (ID) VALUES ( 10 )')
