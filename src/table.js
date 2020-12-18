@@ -128,24 +128,35 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
   }
   const opts = { chunker, get, cache, ...mf }
 
+  let rows
+  let list
+  let writeIndex
+  let blocks = []
   if (table.rows !== null) {
     let i = await table.rows.getLength()
-    const list = inserts.map(({ block: { cid }, row }) => ({ key: i++, value: cid, row }))
-    const { blocks, previous, root: rows } = await table.rows.bulk(list)
-    yield * blocks
-    console.log(previous)
-    throw new Error('Not implemented')
+    list = inserts.map(({ block: { cid }, row }) => ({ key: i++, value: cid, row }))
+    const { blocks: __blocks, previous, root } = await table.rows.bulk(list)
+    rows = root
+    yield * __blocks
+    writeIndex = async (column, i) => {
+      const entries = []
+      for (const { key, row } of list) {
+        const val = row.getIndex(i)
+        entries.push({ key: [val, key], row, value: row.address })
+      }
+      const { blocks: _blocks, root } = await column.index.bulk(entries)
+      _blocks.forEach(b => blocks.push(b))
+      return root
+    }
   } else {
     let i = 1
-    const list = inserts.map(({ block: { cid }, row }) => ({ key: i++, value: cid, row }))
-    let rows
+    list = inserts.map(({ block: { cid }, row }) => ({ key: i++, value: cid, row }))
 
     for await (const node of createSparseArray({ list, ...opts })) {
       yield node.block
       rows = node
     }
-    let blocks = []
-    const writeIndex = async (column, i) => {
+    writeIndex = async (column, i) => {
       const entries = []
       for (const { key, row } of list) {
         const val = row.getIndex(i)
@@ -158,32 +169,32 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
       }
       return index
     }
-    const promises = table.columns.map((...args) => writeIndex(...args))
-    const pending = new Set(promises)
-    promises.forEach(p => p.then(() => pending.delete(p)))
-    while (pending.size) {
-      await Promise.race([...pending])
-      yield * blocks
-      blocks = []
-    }
-    const indexes = await Promise.all(promises.map(p => p.then(index => index.address)))
-    const node = await table.encodeNode()
-    node.rows = await rows.address
-    node.columns = []
-    const columns = await Promise.all(table.columns.map(c => c.encodeNode()))
-    while (columns.length) {
-      const col = columns.shift()
-      col.index = await indexes.shift()
-      const block = await encode(col)
-      yield block
-      node.columns.push(block.cid)
-    }
-    const newTable = await encode(node)
-    yield newTable
-    const dbNode = await database.encodeNode()
-    dbNode.tables[table.name] = newTable.cid
-    yield encode(dbNode)
   }
+  const promises = table.columns.map((...args) => writeIndex(...args))
+  const pending = new Set(promises)
+  promises.forEach(p => p.then(() => pending.delete(p)))
+  while (pending.size) {
+    await Promise.race([...pending])
+    yield * blocks
+    blocks = []
+  }
+  const indexes = await Promise.all(promises.map(p => p.then(index => index.address)))
+  const node = await table.encodeNode()
+  node.rows = await rows.address
+  node.columns = []
+  const columns = await Promise.all(table.columns.map(c => c.encodeNode()))
+  while (columns.length) {
+    const col = columns.shift()
+    col.index = await indexes.shift()
+    const block = await encode(col)
+    yield block
+    node.columns.push(block.cid)
+  }
+  const newTable = await encode(node)
+  yield newTable
+  const dbNode = await database.encodeNode()
+  dbNode.tables[table.name] = newTable.cid
+  yield encode(dbNode)
 }
 
 const rangeOperators = new Set(['<', '>', '<=', '>='])

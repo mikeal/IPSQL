@@ -99,7 +99,7 @@ const create = q => {
   return IPSQL.create(q, { get, put, chunker })
 }
 
-describe('sql', () => {
+describe('basics', () => {
   it('basic create', async () => {
     const { database: db } = await runSQL(createPersons)
     same(entries(db.tables).length, 1)

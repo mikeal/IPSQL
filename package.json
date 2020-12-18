@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha test/test-*.js"
   },
   "keywords": [],
   "author": "Mikeal Rogers <mikeal.rogers@gmail.com> (https://www.mikealrogers.com/)",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@ipld/dag-cbor": "^2.0.3",
-    "chunky-trees": "^0.3.0",
+    "chunky-trees": "^0.3.1",
     "multiformats": "^4.4.1"
   }
 }
