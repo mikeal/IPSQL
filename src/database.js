@@ -147,7 +147,7 @@ const exec = (ast, { database, chunker }) => {
     }
     throw new Error('Not implemented')
   }
-  if (type === 'insert') {
+  if (type === 'insert' || type === 'update') {
     if (!database) throw new Error('No database to create table in')
     const [{ db, table: name }] = ast.table
     if (db !== null) throw new Error('Not implemented')

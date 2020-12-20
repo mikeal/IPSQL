@@ -21,7 +21,7 @@ const getNode = async (cid, get, cache, create) => {
 }
 
 class SQLBase {
-  constructor ({ block }) {
+  constructor ({ block, get }) {
     this.block = block || this.encode()
     this.address = this.block.then ? this.block.then(b => b.cid) : this.block.cid
   }

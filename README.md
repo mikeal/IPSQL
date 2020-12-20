@@ -17,6 +17,7 @@ changes will land without notice.
     - [ ] BLOB
     - [ ] FLOAT
     - [ ] DATE
+- [ ] ALTER TABLE
 - INSERT
   - [x] ROWS `INSERT INTO table_name VALUES ( 'test' )
   - [x] COLUMNS `INSERT INTO table_name ( column_name ) VALUES ( 'test' )`

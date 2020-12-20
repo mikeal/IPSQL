@@ -46,11 +46,53 @@ class Row {
   constructor ({ block, table }) {
     this.block = block
     this.value = block.value
-    this.props = table.columns.map(col => col.schema)
+    this.table = table
+  }
+
+  get props () {
+    return this.table.columns.map(col => col.schema)
   }
 
   get address () {
     return this.block.cid
+  }
+
+  async update (ast) {
+    let obj = this.toObject()
+    for (const change of ast.set) {
+      const schema = this.props.find(c => c.column.column === change.column)
+      validate(schema, change.value)
+      obj[change.column] = change.value.value
+    }
+    let block
+    for (const { column: { column } } of this.props) {
+      if (typeof column === 'undefined') {
+        block = await encode(obj)
+        break
+      }
+    }
+    if (!block) {
+      obj = this.allColumnNames().map(name => obj[name])
+      block = await encode(obj)
+    }
+    return new Row({ block, table: this.table })
+  }
+
+  async rdiff (cid, get, cache) {
+    // reverse diff, returns the old values of CID compared to this
+    let block
+    if (cache.has(cid)) {
+      block = cache.get(cid).block
+    } else {
+      block = await get(cid)
+    }
+    const row = new Row({ block, table: this.table })
+    const changes = {}
+    for (const name of this.allColumnNames()) {
+      const [ a, b ] = [ this.get(name), row.get(name) ]
+      if (a !== b) changes[name] = b
+    }
+    return changes
   }
 
   allColumnNames () {
@@ -82,8 +124,8 @@ class Row {
     } else if (Array.isArray(query)) {
       const result = []
       for (const { expr, as } of query) {
-        if (as !== null) throw new Error('Not Implmented')
-        if (expr.type !== 'column_ref') throw new Error('Not Implmented')
+        if (as !== null) throw new Error('Not Implemented')
+        if (expr.type !== 'column_ref') throw new Error('Not Implemented')
         if (expr.table !== null) throw new Error('Not Implemented')
         result.push(this.get(expr.column))
       }
@@ -105,46 +147,65 @@ class Row {
   }
 
   toObject () {
-    throw new Error('no implemented')
-    /* this is not finished
     if (Array.isArray(this.value)) {
-      const props = [...this.props()]
+      const values = [...this.value]
+      const entries = this.allColumnNames().map(k => [k, values.shift()])
+      return Object.fromEntries(entries)
     } else {
-      throw new Error('Unsupported')
+      return this.value
     }
-    */
   }
 }
 
 const tableInsert = async function * (table, ast, { database, chunker }) {
   const { get, cache } = database
+
   const { values } = ast
   const inserts = []
   const schemas = table.columns.map(col => col.schema)
-  for (const { type, value } of values) {
-    let row
-    if (ast.columns) {
-      row = {}
-    } else {
-      row = []
-    }
-    if (type !== 'expr_list') throw new Error('Not implemented')
-    for (let i = 0; i < value.length; i++) {
-      const schema = schemas[i]
-      const val = value[i]
-      validate(schema, val)
-      if (ast.columns) {
-        const columnName = ast.columns[i]
-        row[columnName] = val.value
-      } else {
-        row.push(val.value)
+  if (ast.type === 'update') {
+    // TODO: replace this with a more advanced update
+    // in the tree so that we don't have to do two traversals
+    if (ast.where) throw new Error('Not implemented')
+    const entries = await table.rows.getAllEntries()
+    const blocks = []
+    const _doEntry = async entry => {
+      let row = await table.getRow(entry.value, get, cache)
+      row = await row.update(ast)
+      if (!entry.value.equals(await row.address)) {
+        cache.set(row)
+        blocks.push(row.block)
+        inserts.push({ block: row.block, row, rowid: entry.key })
       }
     }
-    const block = await encode(row)
-    yield block
-    const _row = new Row({ block, table })
-    cache.set(_row.address, _row)
-    inserts.push({ block, row: _row })
+    await Promise.all(entries.map(_doEntry))
+    yield * blocks
+  } else {
+    for (const { type, value } of values) {
+      let row
+      if (ast.columns) {
+        row = {}
+      } else {
+        row = []
+      }
+      if (type !== 'expr_list') throw new Error('Not implemented')
+      for (let i = 0; i < value.length; i++) {
+        const schema = schemas[i]
+        const val = value[i]
+        validate(schema, val)
+        if (ast.columns) {
+          const columnName = ast.columns[i]
+          row[columnName] = val.value
+        } else {
+          row.push(val.value)
+        }
+      }
+      const block = await encode(row)
+      yield block
+      const _row = new Row({ block, table })
+      cache.set(_row)
+      inserts.push({ block, row: _row })
+    }
   }
   const opts = { chunker, get, cache, ...mf }
 
@@ -154,13 +215,24 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
   let blocks = []
   if (table.rows !== null) {
     let i = await table.rows.getLength()
-    list = inserts.map(({ block: { cid }, row }) => ({ key: i++, value: cid, row }))
-    const { blocks: __blocks, root } = await table.rows.bulk(list)
+    list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
+    const { blocks: __blocks, root, previous } = await table.rows.bulk(list)
     rows = root
     yield * __blocks
+    const prev = new Map(previous.map(({ key, value }) => [ key, value ]))
+    list = await Promise.all(list.map(async ({ key, row, value }) => {
+      let changes
+      if (prev.get(key)) {
+        changes = await row.rdiff(prev.get(key), get, cache)
+      }
+      return { key, row, value, changes }
+    }))
     writeIndex = async (column, i) => {
       const entries = []
-      for (const { key, row } of list) {
+      for (const { key, row, changes } of list) {
+        if (changes && typeof changes[column.name] !== 'undefined') {
+          entries.push({ key: [ changes[column.name], key ], del: true })
+        }
         const val = row.getIndex(i)
         entries.push({ key: [val, key], row, value: row.address })
       }
@@ -170,7 +242,7 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
     }
   } else {
     let i = 1
-    list = inserts.map(({ block: { cid }, row }) => ({ key: i++, value: cid, row }))
+    list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
 
     for await (const node of createSparseArray({ list, ...opts })) {
       yield node.block
@@ -338,6 +410,11 @@ class Table extends SQLBase {
 
   getColumn (columnName) {
     return this.columns.find(c => c.name === columnName)
+  }
+
+  async getRow (cid, get, cache) {
+    const create = block => new Row({ block, table: this })
+    return getNode(cid, get, cache, create)
   }
 
   async encodeNode () {
