@@ -181,8 +181,14 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
   if (ast.type === 'update') {
     // TODO: replace this with a more advanced update
     // in the tree so that we don't have to do two traversals
-    if (ast.where) throw new Error('Not implemented')
-    const entries = await table.rows.getAllEntries()
+    let entries
+    if (ast.where) {
+      const where = new Where(database, ast.where, table)
+      const all = await where.asMap()
+      entries = [...all.entries()].map(([key, value]) => ({ key, value }))
+    } else {
+      entries = await table.rows.getAllEntries()
+    }
     const blocks = []
     const _doEntry = async entry => {
       let row = await table.getRow(entry.value, get, cache)

@@ -85,4 +85,28 @@ describe('updates', () => {
     all = await ipsql.read('SELECT * FROM Test WHERE String = \'b\'')
     same(all, [[11, 1.2, 'b']])
   })
+  it('update WHERE', async () => {
+    let ipsql = await create('CREATE TABLE Test (ID int, String varchar(255))')
+    let expected = [[10, 'a'], [11, 'b'], [12, 'a']]
+    const values = expected.map(([i, s]) => `(${i}, "${s}")`)
+    ipsql = await ipsql.write(`INSERT INTO Test VALUES ${values.join(', ')}`)
+    let all = await ipsql.read('SELECT * FROM Test')
+    same(all, expected)
+    ipsql = await ipsql.write('UPDATE Test SET ID = 11 WHERE String = \'a\'')
+    expected = expected.map(([i, s]) => [s === 'a' ? 11 : i, s])
+    all = await ipsql.read('SELECT * FROM Test')
+    same(all, expected)
+
+    all = await ipsql.read('SELECT * FROM Test WHERE String = \'a\'')
+    same(all, [[11, 'a'], [11, 'a']])
+
+    all = await ipsql.read('SELECT * FROM Test WHERE String = \'b\'')
+    same(all, [[11, 'b']])
+
+    all = await ipsql.read('SELECT * FROM Test WHERE ID = 10')
+    same(all, [])
+
+    all = await ipsql.read('SELECT * FROM Test WHERE ID = 11')
+    same(all, expected)
+  })
 })

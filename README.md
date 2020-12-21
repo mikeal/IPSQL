@@ -28,8 +28,9 @@ changes will land without notice.
   - [x] ROWS `INSERT INTO table_name VALUES ( 'test' )`
   - [x] COLUMNS `INSERT INTO table_name ( column_name ) VALUES ( 'test' )`
 - UPDATE
-  - [x] UPDATE w/o WHERE
-  - [ ] UPDATE WHERE
+  - [x] UPDATE SET w/o WHERE
+  - [x] UPDATE SET WHERE
+- [ ] DELETE
 - SELECT
   - [x] * `SELECT * FROM table_name`
   - [x] COLUMNS `SELECT column1, column2 FROM table_name`
