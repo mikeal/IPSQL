@@ -61,7 +61,7 @@ changes will land without notice.
   - [ ] ORDER BY
   - [ ] GROUP BY
   - [ ] HAVING
-  - UNION
+  - [ ] UNION
 
 ### IPLD Schema
 
