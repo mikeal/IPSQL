@@ -37,12 +37,20 @@ changes will land without notice.
   - [x] * `SELECT * FROM table_name`
   - [x] COLUMNS `SELECT column1, column2 FROM table_name`
   - [ ] ROWID meta column
+  - [ ] TOP
+  - [ ] MIN
+  - [ ] MAX
+  - [ ] COUNT
+  - [ ] AVG
+  - [ ] SUM
+  - [ ] LIKE *pattern*
   - WHERE
     - [x] AND
     - [x] OR
     - [x] ASC, DESC
     - [x] basic comparison (=, >, <, >=, <=)
     - [ ] <>
+    - [ ] GROUP BY
     - [x] ORDER BY
     - [ ] BETWEEN
     - [ ] LIKE
@@ -50,6 +58,10 @@ changes will land without notice.
     - [ ] NOT
     - [ ] IS NOT NULL, IS NULL
   - [ ] JOIN
+  - [ ] ORDER BY
+  - [ ] GROUP BY
+  - [ ] HAVING
+ - UNION
 
 ### IPLD Schema
 
