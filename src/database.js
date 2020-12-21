@@ -134,7 +134,23 @@ class Select {
 
   async all () {
     const results = await this._all()
-    return results.map(r => r.columns)
+    const data = results.map(r => r.columns)
+    if (!this.ast.columns || this.ast.columns === '*') return data
+    else {
+      if (this.ast.columns.length === 1 && this.ast.columns[0].expr.type === 'aggr_func') {
+        const { name } = this.ast.columns[0].expr
+        if (name === 'COUNT') return data.length
+        const reduced = data.map(([i]) => i).reduce((a, b) => a + b)
+        if (name === 'SUM') return reduced
+        if (name === 'AVG') return reduced / data.length
+        throw new Error('Not Implemented')
+      }
+      for (const col of this.ast.columns) {
+        const { type } = col.expr
+        if (type !== 'column_ref') throw new Error('Not Implemented')
+      }
+      return data
+    }
   }
 }
 

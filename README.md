@@ -40,9 +40,9 @@ changes will land without notice.
   - [ ] TOP
   - [ ] MIN
   - [ ] MAX
-  - [ ] COUNT
-  - [ ] AVG
-  - [ ] SUM
+  - [x] COUNT
+  - [x] AVG
+  - [x] SUM
   - [ ] LIKE *pattern*
   - WHERE
     - [x] AND

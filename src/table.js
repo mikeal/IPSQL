@@ -138,11 +138,15 @@ class Row {
       return this.toArray()
     } else if (Array.isArray(query)) {
       const result = []
-      for (const { expr, as } of query) {
+      for (let { expr, as } of query) {
         if (as !== null) throw new Error('Not Implemented')
-        if (expr.type !== 'column_ref') throw new Error('Not Implemented')
-        if (expr.table !== null) throw new Error('Not Implemented')
-        result.push(this.get(expr.column))
+        if (expr.table) throw new Error('Not Implemented')
+        if (expr.type === 'aggr_func') expr = expr.args.expr
+        if (expr.type === 'column_ref') {
+          result.push(this.get(expr.column))
+        } else {
+          throw new Error('Not Implemented')
+        }
       }
       return result
     } else {
