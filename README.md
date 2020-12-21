@@ -38,8 +38,8 @@ changes will land without notice.
   - [x] COLUMNS `SELECT column1, column2 FROM table_name`
   - [ ] ROWID meta column
   - [ ] TOP
-  - [ ] MIN
-  - [ ] MAX
+  - [x] MIN
+  - [x] MAX
   - [x] COUNT
   - [x] AVG
   - [x] SUM
