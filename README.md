@@ -30,7 +30,9 @@ changes will land without notice.
 - UPDATE
   - [x] UPDATE SET w/o WHERE
   - [x] UPDATE SET WHERE
-- [ ] DELETE
+- DELETE
+  - [ ] DELETE w/o WHERE (deletes table)
+  - [ ] DELETE WHERE
 - SELECT
   - [x] * `SELECT * FROM table_name`
   - [x] COLUMNS `SELECT column1, column2 FROM table_name`
