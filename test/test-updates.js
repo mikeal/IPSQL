@@ -35,10 +35,10 @@ describe('updates', () => {
     all = await ipsql.read('SELECT * FROM Test WHERE String = \'a\'')
     same(all, [[11, 'a']])
   })
-  it('update (no where)', async () => {
+  it('update (int, varchar)', async () => {
     let ipsql = await create('CREATE TABLE Test (ID int, String varchar(255))')
     ipsql = await ipsql.write('INSERT INTO Test VALUES ( 10, \'a\' )')
-    ipsql = await ipsql.write(`UPDATE Test SET String = 'b'`)
+    ipsql = await ipsql.write('UPDATE Test SET String = \'b\'')
     let all = await ipsql.read('SELECT * FROM Test')
     same(all, [[10, 'b']])
     all = await ipsql.read('SELECT * FROM Test WHERE ID = 10')
@@ -47,5 +47,42 @@ describe('updates', () => {
     same(all, [])
     all = await ipsql.read('SELECT * FROM Test WHERE String = \'b\'')
     same(all, [[10, 'b']])
+  })
+  it('update (int, float, varchar)', async () => {
+    let ipsql = await create('CREATE TABLE Test (Int int, Float float, String varchar(255))')
+    ipsql = await ipsql.write('INSERT INTO Test VALUES ( 10, 1.1, \'a\' )')
+
+    /* update string */
+    ipsql = await ipsql.write('UPDATE Test SET String = \'b\'')
+    let all = await ipsql.read('SELECT * FROM Test')
+    same(all, [[10, 1.1, 'b']])
+    all = await ipsql.read('SELECT * FROM Test WHERE Int = 10')
+    same(all, [[10, 1.1, 'b']])
+    all = await ipsql.read('SELECT * FROM Test WHERE String = \'a\'')
+    same(all, [])
+    all = await ipsql.read('SELECT * FROM Test WHERE String = \'b\'')
+    same(all, [[10, 1.1, 'b']])
+
+    /* update int */
+    ipsql = await ipsql.write('UPDATE Test SET Int = 11')
+    all = await ipsql.read('SELECT * FROM Test')
+    same(all, [[11, 1.1, 'b']])
+    all = await ipsql.read('SELECT * FROM Test WHERE Int = 11')
+    same(all, [[11, 1.1, 'b']])
+    all = await ipsql.read('SELECT * FROM Test WHERE Int = 10')
+    same(all, [])
+    all = await ipsql.read('SELECT * FROM Test WHERE String = \'b\'')
+    same(all, [[11, 1.1, 'b']])
+
+    /* update float */
+    ipsql = await ipsql.write('UPDATE Test SET Float = 1.2')
+    all = await ipsql.read('SELECT * FROM Test')
+    same(all, [[11, 1.2, 'b']])
+    all = await ipsql.read('SELECT * FROM Test WHERE Float = 1.2')
+    same(all, [[11, 1.2, 'b']])
+    all = await ipsql.read('SELECT * FROM Test WHERE Float = 1.1')
+    same(all, [])
+    all = await ipsql.read('SELECT * FROM Test WHERE String = \'b\'')
+    same(all, [[11, 1.2, 'b']])
   })
 })

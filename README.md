@@ -13,15 +13,23 @@ changes will land without notice.
   - TABLE
     - [x] INTEGER
     - [x] VARCHAR(size)
-    - [ ] BOOLEAN
-    - [ ] BLOB
-    - [ ] FLOAT
+    - [x] FLOAT
     - [ ] DATE
+    - [ ] TIME
+    - [ ] DATETIME
+    - [ ] BLOB (should use the FBL, values smaller than 32b will be inline binary, below 1MB should
+                be a single raw block link, anything else is a full tree FBL as a stream)
+    - [ ] TEXT (may never support, according to spec this is upt 2GB of string data so it's hard
+                to figure out what the inline vs linking rules would be. Instead, using VARCHAR
+                as the inlined string and BLOB the *probably* linked type)
+    - [ ] BOOLEAN (this isn't actually supported in the SQL parser we use, must be quite rare)
 - [ ] ALTER TABLE
 - INSERT
-  - [x] ROWS `INSERT INTO table_name VALUES ( 'test' )
+  - [x] ROWS `INSERT INTO table_name VALUES ( 'test' )`
   - [x] COLUMNS `INSERT INTO table_name ( column_name ) VALUES ( 'test' )`
-- [ ] UPDATE
+- UPDATE
+  - [x] UPDATE w/o WHERE
+  - [ ] UPDATE WHERE
 - SELECT
   - [x] * `SELECT * FROM table_name`
   - [x] COLUMNS `SELECT column1, column2 FROM table_name`

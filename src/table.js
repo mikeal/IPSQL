@@ -33,12 +33,27 @@ class Column extends SQLBase {
   }
 }
 
+const isInt = n => n % 1 === 0
+
 const validate = (schema, val) => {
   const { dataType, length } = schema.definition
   const { type, value } = val
-  if (value.length > length) throw new Error('Schema validation: value too long')
-  if (type === 'string' && dataType === 'VARCHAR') return true
-  if (type === 'number' && dataType === 'INT') return true
+  if (dataType === 'VARCHAR') {
+    if (value.length > length) throw new Error('Schema validation: value too long')
+    if (type === 'string') return true
+    throw new Error('Invalid VARCHAR type')
+  }
+  if (dataType === 'INT') {
+    if (type === 'number' && isInt(value)) return true
+    throw new Error('Invalid INT type')
+  }
+  if (dataType === 'FLOAT') {
+    if (type === 'number') return true
+    throw new Error('Invalid FLOAT type')
+  }
+  // TODO: BLOB
+  // TODO: DATE
+  // TODO: DATETIME
   throw new Error('Not Implemented')
 }
 
@@ -89,7 +104,7 @@ class Row {
     const row = new Row({ block, table: this.table })
     const changes = {}
     for (const name of this.allColumnNames()) {
-      const [ a, b ] = [ this.get(name), row.get(name) ]
+      const [a, b] = [this.get(name), row.get(name)]
       if (a !== b) changes[name] = b
     }
     return changes
@@ -219,7 +234,7 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
     const { blocks: __blocks, root, previous } = await table.rows.bulk(list)
     rows = root
     yield * __blocks
-    const prev = new Map(previous.map(({ key, value }) => [ key, value ]))
+    const prev = new Map(previous.map(({ key, value }) => [key, value]))
     list = await Promise.all(list.map(async ({ key, row, value }) => {
       let changes
       if (prev.get(key)) {
@@ -231,7 +246,7 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
       const entries = []
       for (const { key, row, changes } of list) {
         if (changes && typeof changes[column.name] !== 'undefined') {
-          entries.push({ key: [ changes[column.name], key ], del: true })
+          entries.push({ key: [changes[column.name], key], del: true })
         }
         const val = row.getIndex(i)
         entries.push({ key: [val, key], row, value: row.address })
@@ -294,8 +309,10 @@ const rangeOperators = new Set(['<', '>', '<=', '>='])
 const getRangeQuery = ({ operator, value, right }, column) => {
   const { dataType } = column.schema.definition
   let incr
-  if (dataType === 'INT') {
-    incr = 1
+  if (dataType === 'INT' || dataType === 'FLOAT') {
+    // TODO: this causes precision issues that need to get fixed
+    // in a later filter
+    incr = 0.0000000000001
   } else if (dataType === 'VARCHAR') {
     incr = '\x00'
   } else {
