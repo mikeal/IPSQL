@@ -1,5 +1,4 @@
 import Papa from 'papaparse'
-import isStream from 'is-stream'
 import IPSQL from './index.js'
 
 const defaults = { header: true, dynamicTyping: true }
@@ -13,11 +12,11 @@ const main = ({ input, db, ipfs, tableName, cache, chunker }) => {
       const types = {}
       const sizes = {}
       for (const row of data) {
-        for (const [ key, value ] of Object.entries(row)) {
+        for (const [key, value] of Object.entries(row)) {
           if (value === null) continue
           if (typeof value === 'string') {
             if (value.length) {
-              sizes[key] = value.length > ( sizes[key] || 0 ) ? value.length : sizes[key]
+              sizes[key] = value.length > (sizes[key] || 0) ? value.length : sizes[key]
               types[key] = 'string'
             }
           } else if (typeof value === 'number') {
@@ -39,13 +38,13 @@ const main = ({ input, db, ipfs, tableName, cache, chunker }) => {
         if (types[column] === 'boolean') columns.push(`${column} INTEGER`)
         if (!types[column]) skips.add(column)
       }
-      let sql = `CREATE TABLE \`${tableName}\` (${ columns.join(', ') })`
+      let sql = `CREATE TABLE \`${tableName}\` (${columns.join(', ')})`
       console.log(sql)
       let db = await IPSQL.create(sql, { ipfs, chunker, cache })
 
       // hack: this fixes an apparent bug in papaparse
       const fix = () => {
-        const row = data[data.length -1]
+        const row = data[data.length - 1]
         for (const value of Object.values(row)) {
           if (value) return
         }
@@ -53,13 +52,13 @@ const main = ({ input, db, ipfs, tableName, cache, chunker }) => {
       }
       fix()
 
-      sql = `INSERT INTO \`${tableName}\` VALUES ${ data.map(row => {
+      sql = `INSERT INTO \`${tableName}\` VALUES ${data.map(row => {
         const ret = []
         for (const column of meta.fields) {
           if (!skips.has(column)) ret.push(JSON.stringify(row[column]))
         }
-        return `( ${ ret.join(', ') } )`
-      }).join(', ') }`
+        return `( ${ret.join(', ')} )`
+      }).join(', ')}`
 
       db = await db.write(sql)
       resolve(db)

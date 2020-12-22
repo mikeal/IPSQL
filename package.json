@@ -23,7 +23,6 @@
     "chunky-trees": "^0.3.2",
     "dag-service": "0.0.0-dev",
     "interface-datastore": "^2.0.1",
-    "is-stream": "^2.0.0",
     "libp2p": "^0.30.0",
     "libp2p-kad-dht": "^0.20.4",
     "libp2p-mplex": "^0.10.1",

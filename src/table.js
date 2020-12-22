@@ -72,10 +72,6 @@ class Row {
     return this.table.columns.map(col => col.schema)
   }
 
-  get address () {
-    return this.block.cid
-  }
-
   async update (ast) {
     let obj = this.toObject()
     for (const change of ast.set) {
@@ -201,7 +197,7 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
     const _doEntry = async entry => {
       let row = await table.getRow(entry.value, get, cache)
       row = await row.update(ast)
-      if (!entry.value.equals(await row.address)) {
+      if (!entry.value.equals(row.block.cid)) {
         cache.set(row)
         blocks.push(row.block)
         inserts.push({ block: row.block, row, rowid: entry.key })
@@ -263,7 +259,7 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
           entries.push({ key: [changes[column.name], key], del: true })
         }
         const val = row.getIndex(i)
-        entries.push({ key: [val, key], row, value: row.address })
+        entries.push({ key: [val, key], row, value: row.block.cid })
       }
       const { blocks: _blocks, root } = await column.index.bulk(entries)
       _blocks.forEach(b => blocks.push(b))
@@ -281,7 +277,7 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
       const entries = []
       for (const { key, row } of list) {
         const val = row.getIndex(i)
-        entries.push({ key: [val, key], row, value: row.address })
+        entries.push({ key: [val, key], row, value: row.block.cid })
       }
       let index
       for await (const node of createDBIndex({ list: entries, ...opts })) {
