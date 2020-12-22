@@ -19,10 +19,16 @@
   },
   "dependencies": {
     "@ipld/dag-cbor": "^2.0.3",
+    "@textile/ipfs-lite": "^0.1.6",
     "chunky-trees": "^0.3.2",
-    "ipfs": "^0.52.3",
-    "ipfsd-ctl": "^7.2.0",
+    "dag-service": "0.0.0-dev",
+    "interface-datastore": "^2.0.1",
     "is-stream": "^2.0.0",
+    "libp2p": "^0.30.0",
+    "libp2p-kad-dht": "^0.20.4",
+    "libp2p-mplex": "^0.10.1",
+    "libp2p-noise": "^2.0.1",
+    "libp2p-tcp": "^0.15.1",
     "multiformats": "^4.4.1",
     "papaparse": "^5.3.0",
     "yargs": "^16.2.0"
