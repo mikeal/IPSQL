@@ -6,7 +6,10 @@ const mf = { codec, hasher }
 
 const encode = value => encoder({ value, ...mf })
 const decode = bytes => decoder({ bytes, ...mf })
-const createBlock = (bytes, cid) => create({ bytes, cid, ...mf })
+const createBlock = (bytes, cid) => {
+  if (cid.code !== 113) throw new Error('Unsupported')
+  return create({ bytes, cid, ...mf })
+}
 
 const immediate = () => new Promise(resolve => setImmediate(resolve))
 
@@ -16,7 +19,7 @@ const getNode = async (cid, get, cache, create) => {
   }
   const block = await get(cid)
   const node = await create(block)
-  cache.set(cid, node)
+  if (node.address) cache.set(node)
   return node
 }
 

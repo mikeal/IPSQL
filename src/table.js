@@ -38,12 +38,16 @@ const isInt = n => n % 1 === 0
 const validate = (schema, val) => {
   const { dataType, length } = schema.definition
   const { type, value } = val
+
+  if (schema.nullable !== null) throw new Error('Not implemented')
+  if (value === null) return true
+
   if (dataType === 'VARCHAR') {
     if (value.length > length) throw new Error('Schema validation: value too long')
     if (type === 'string') return true
     throw new Error('Invalid VARCHAR type')
   }
-  if (dataType === 'INT') {
+  if (dataType === 'INT' || dataType === 'INTEGER') {
     if (type === 'number' && isInt(value)) return true
     throw new Error('Invalid INT type')
   }
@@ -319,7 +323,7 @@ const rangeOperators = new Set(['<', '>', '<=', '>='])
 const getRangeQuery = ({ operator, value, right }, column) => {
   const { dataType } = column.schema.definition
   let incr
-  if (dataType === 'INT' || dataType === 'FLOAT') {
+  if (dataType === 'INT' || dataType === 'INTEGER' || dataType === 'FLOAT') {
     // TODO: this causes precision issues that need to get fixed
     // in a later filter
     incr = 0.0000000000001
@@ -346,14 +350,14 @@ const getRangeQuery = ({ operator, value, right }, column) => {
 }
 
 const absoluteStart = ({ schema: { definition: { dataType, length } } }) => {
-  if (dataType === 'INT') return -1
+  if (dataType === 'INT' || dataType === 'INTEGER') return -1
   if (dataType === 'VARCHAR') {
     return [...Array(length).keys()].map(() => '\x00').join('')
   }
   throw new Error('Not Implemented')
 }
 const absoluteEnd = ({ schema: { definition: { dataType, length } } }) => {
-  if (dataType === 'INT') return Infinity
+  if (dataType === 'INT' || dataType === 'INTEGER') return Infinity
   if (dataType === 'VARCHAR') {
     return Buffer.from([...Array(length + 1).keys()].map(() => 255)).toString()
   }

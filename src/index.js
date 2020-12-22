@@ -59,6 +59,11 @@ class IPSQL {
   static create (q, opts) {
     opts.cache = opts.cache || defaults.cache
     opts.chunker = opts.chunker || defaults.chunker
+    if (opts.ipfs) {
+      const store = ipfsStore(opts.ipfs)
+      opts.get = store.get
+      opts.put = store.put
+    }
     const db = new IPSQL({ ...opts, db: Database.create(opts) })
     return db.write(q)
   }

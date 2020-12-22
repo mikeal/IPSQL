@@ -4,6 +4,9 @@
   "description": "IPLD Schema",
   "main": "index.js",
   "type": "module",
+  "bin": {
+    "ipsql": "bin/bin.js"
+  },
   "scripts": {
     "test": "standard && mocha test/test-*.js"
   },
@@ -16,7 +19,12 @@
   },
   "dependencies": {
     "@ipld/dag-cbor": "^2.0.3",
-    "chunky-trees": "^0.3.1",
-    "multiformats": "^4.4.1"
+    "chunky-trees": "^0.3.2",
+    "ipfs": "^0.52.3",
+    "ipfsd-ctl": "^7.2.0",
+    "is-stream": "^2.0.0",
+    "multiformats": "^4.4.1",
+    "papaparse": "^5.3.0",
+    "yargs": "^16.2.0"
   }
 }
