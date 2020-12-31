@@ -1,25 +1,16 @@
-import ipfsModule from 'ipfs'
-import Ctl from 'ipfsd-ctl'
-
-const createIPFS = () => Ctl.createController({
-  type: 'proc',
-  ipfsModule,
-  test: true,
-  disposable: true
-})
+import Repo from 'ipfs-repo'
+import tempy from 'tempy'
+import ipfs from 'ipfs'
 
 const tmp = async () => {
-  const ipfsd = await createIPFS()
-  /*
-  if (ipfsd.api.stop) throw new Error('it is already set')
-  ipfsd.api.stop = () => ipfsd.stop()
-  */
-  return ipfsd.api
+  const dir = tempy.directory()
+  const repo = new Repo(dir)
+  return ipfs.create({ repo })
 }
 
 const create = argv => {
   if (argv.tmp) return tmp()
-  return ipfsModule.create()
+  return ipfs.create()
 }
 
 export default create

@@ -3,6 +3,7 @@ import { Database } from './database.js'
 import { nocache } from 'chunky-trees/cache'
 import { createBlock } from './utils.js'
 import { bf } from 'chunky-trees/utils'
+import ipfsStore from './ipfs.js'
 
 const immutable = (obj, props) => {
   for (const [key, value] of Object.entries(props)) {
@@ -11,19 +12,6 @@ const immutable = (obj, props) => {
 }
 
 const defaults = { cache: nocache, chunker: bf(256) }
-
-const ipfsStore = ipfs => {
-  const get = async cid => {
-    const { data } = await ipfs.block.get(cid.toString())
-    return createBlock(data, cid)
-  }
-  const put = async block => {
-    const opts = { cid: block.cid.toString() }
-    await ipfs.block.put(block.bytes, opts)
-    return true
-  }
-  return { get, put }
-}
 
 class IPSQL {
   constructor ({ cid, get, put, db }) {
@@ -70,6 +58,7 @@ class IPSQL {
 
   static async from (cid, { ipfs, get, put, cache, chunker }) {
     if (typeof cid === 'string') cid = CID.parse(cid)
+    let store
     if (ipfs) {
       const store = ipfsStore(ipfs)
       get = store.get

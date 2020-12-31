@@ -19,7 +19,7 @@ const ipfsOptions = yargs => {
   })
   yargs.option('serve', {
     describe: 'Continue running IPFS instance',
-    default: false,
+    default: false
   })
 }
 
@@ -52,7 +52,7 @@ const options = yargs => {
 
 const mkopts = async argv => ({ ipfs: await ipfs(argv), cache: cache(), chunker })
 
-const getDatabase = async (argv, cid=null) => {
+const getDatabase = async (argv, cid = null) => {
   const opts = await mkopts(argv)
   if (typeof cid === 'string') cid = CID.parse(cid)
   const db = await IPSQL.from(cid, opts)
@@ -70,6 +70,7 @@ const runImport = async argv => {
   const opts = await mkopts(argv)
   if (argv.database) opts.db = await getDatabase(argv, argv.database)
   const db = await csv({ ...argv, ...opts, input })
+  console.log('stopping')
   if (!db.serve) await opts.ipfs.stop()
   console.log(db.cid.toString())
 }

@@ -228,7 +228,6 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
       const block = await encode(row)
       yield block
       const _row = new Row({ block, table })
-      cache.set(_row)
       inserts.push({ block, row: _row })
     }
   }
