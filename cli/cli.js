@@ -4,24 +4,11 @@ import { hideBin } from 'yargs/helpers'
 import IPSQL from '../src/index.js'
 import { bf } from 'chunky-trees/utils'
 import cache from '../src/cache.js'
-import ipfs from './ipfs.js'
 import { CID } from 'multiformats'
 import csv from '../src/csv.js'
 import fs from 'fs'
 
 const chunker = bf(256)
-
-const ipfsOptions = yargs => {
-  yargs.option('tmp', {
-    describe: 'Use an ephemoral in-memory IPFS instance',
-    type: 'boolean',
-    default: false
-  })
-  yargs.option('serve', {
-    describe: 'Continue running IPFS instance',
-    default: false
-  })
-}
 
 const importOptions = yargs => {
   yargs.positional('file', {
@@ -33,7 +20,6 @@ const importOptions = yargs => {
   yargs.option('tableName', {
     describe: 'Optional Table Name. One will be generated from the import file if not set'
   })
-  ipfsOptions(yargs)
 }
 
 const options = yargs => {
@@ -47,17 +33,9 @@ const options = yargs => {
     describe: 'Output format',
     default: 'json'
   })
-  ipfsOptions(yargs)
 }
 
-const mkopts = async argv => ({ ipfs: await ipfs(argv), cache: cache(), chunker })
-
-const getDatabase = async (argv, cid = null) => {
-  const opts = await mkopts(argv)
-  if (typeof cid === 'string') cid = CID.parse(cid)
-  const db = await IPSQL.from(cid, opts)
-  return db
-}
+const mkopts = argv => ({ cache: cache(), chunker })
 
 const run = async argv => {
   const db = await getDatabase(argv, argv.cid)
@@ -65,17 +43,36 @@ const run = async argv => {
   console.log(JSON.stringify(results, null, 2))
 }
 
-const runImport = async argv => {
+const runImportExport = async argv => {
   const input = fs.readFileSync(argv.file).toString()
-  const opts = await mkopts(argv)
-  if (argv.database) opts.db = await getDatabase(argv, argv.database)
-  const db = await csv({ ...argv, ...opts, input })
-  console.log('stopping')
-  if (!db.serve) await opts.ipfs.stop()
-  console.log(db.cid.toString())
+  const db = await csv({ ...argv, ...mkopts(), input })
 }
 
-yargs(hideBin(process.argv))
-  .command('$0 <cid> <sql>', 'Run IPSQL query', options, run)
-  .command('import <file>', 'Import CSV file into IPFS table', importOptions, runImport)
-  .argv
+const runImportServe = async argv => {
+  const db = await csv({ ...argv, ...mkopts(), input })
+  console.log('import serve')
+}
+
+const csvArgs = yargs => {
+  yargs.positional('input', {
+    describe: 'CSV input file'
+  })
+}
+
+const y = yargs(hideBin(process.argv))
+  .command('query <uri> <sql>', 'Run IPSQL query', options, run)
+  .command('import', 'Import CSV files', yargs => {
+    yargs.command('export <input> <output>', 'Export blocks', yargs => {
+      csvArgs(yargs)
+      yargs.positional('output', {
+        describe: 'File to export to. File extension selects export type'
+      })
+    }, runImportExport)
+    yargs.command('serve <input> [port] [host]', 'Serve the imported database', yargs => {
+      csvArgs(yargs)
+      yargs.positional('port', { describe: 'PORT to bind to' })
+      yargs.positional('host', { describe: 'HOST IP address', default: '0.0.0.0' })
+    }, runImportServe)
+  }, () => y.showHelp())
+
+y.argv
