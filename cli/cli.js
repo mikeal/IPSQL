@@ -100,7 +100,7 @@ const readOnly = block => { throw new Error('Read-only storage mode, cannot writ
 
 const runQuery = async argv => {
   const { remote, cid } = await fromURI(argv.uri, readOnly)
-  const { result } = await remote.query(cid, argv.sql)
+  const { result } = await remote.query(cid.toString(), argv.sql)
   let print
   if (argv.format === 'json') {
     print = obj => JSON.stringify(obj)
