@@ -75,13 +75,21 @@ const getStore = argv => {
   return { get, put }
 }
 
-const dbFromURI = async (uri, put) => {
+const fromURI = async (uri, put, store) => {
   if (!uri.startsWith('tcp://')) throw new Error('Unsupported transport')
   const { client } = network()
   const { hostname, port, pathname } = new URL(uri)
   const remote = await client(+port, hostname)
   const cid = pathname.slice('/'.length)
   const get = async cid => {
+    if (store) {
+      try {
+        const ret = await store.get(cid)
+        return ret
+      } catch (e) {
+        if (!e.message.toLowerCase().includes('not found')) throw e
+      }
+    }
     const bytes = await remote.getBlock(cid.toString())
     const block = await createBlock(bytes, cid)
     return block
@@ -92,7 +100,7 @@ const dbFromURI = async (uri, put) => {
 const readOnly = block => { throw new Error('Read-only storage mode, cannot write blocks') }
 
 const runQuery = async argv => {
-  const { remote, cid } = await dbFromURI(argv.uri, readOnly)
+  const { remote, cid } = await fromURI(argv.uri, readOnly)
   const { result } = await remote.query(cid, argv.sql)
   let print
   if (argv.format === 'json') {
@@ -110,6 +118,14 @@ const runQuery = async argv => {
     console.log(JSON.stringify(result))
   }
   await remote.close()
+}
+
+const runRepl = async argv => {
+  // TODO: run repl with --store option for connecting with local storage
+  const store = inmem()
+  const { remote, cid } = await fromURI(argv.uri, readOnly, store)
+  const cli = repl({ remote, cid, store })
+  cli.show()
 }
 
 const getTableName = argv => argv.tableName || argv.input.slice(argv.input.lastIndexOf('/') + 1)
@@ -154,6 +170,7 @@ const csvArgs = yargs => {
 
 const y = yargs(hideBin(process.argv))
   .command('query <uri> <sql>', 'Run IPSQL query', queryOptions, runQuery)
+  .command('repl <uri>', 'Run local REPL', queryOptions, runRepl)
   .command('import', 'Import CSV files', yargs => {
     yargs.command('export <input> <output>', 'Export blocks', yargs => {
       csvArgs(yargs)
