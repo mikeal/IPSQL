@@ -113,19 +113,25 @@ const runQuery = async argv => {
 
 const getTableName = argv => argv.tableName || argv.input.slice(argv.input.lastIndexOf('/') + 1)
 
-const runImportExport = async argv => {
+const preImport = async (argv, store) => {
+  if (!store) store = getStore(argv)
   const input = fs.readFileSync(argv.input).toString()
-  const store = getStore(argv)
   const tableName = getTableName(argv)
   const db = await csv({ ...argv, ...mkopts(), ...store, input, tableName })
+  return { db, store, input, tableName }
+}
+
+const runImportExport = async (argv) => {
+  const { db } = await preImport(argv)
+}
+
+const runImportRepl = async (argv) => {
+  const { db, store } = await preImport(argv)
 }
 
 const runImportServe = async argv => {
-  const input = fs.readFileSync(argv.input).toString()
-  const store = inmem()
-  const tableName = getTableName(argv)
   console.log('importing...')
-  const db = await csv({ ...argv, ...mkopts(), ...store, input, tableName })
+  const { db, tableName, store } = await preImport(argv, inmem())
   const { server, listen } = network({store})
   const port = argv.port ? +argv.port : await getPort({ port: 8000 })
 
@@ -157,6 +163,8 @@ const y = yargs(hideBin(process.argv))
       yargs.positional('port', { describe: 'PORT to bind to' })
       yargs.positional('host', { describe: 'HOST IP address', default: '0.0.0.0' })
     }, runImportServe)
+    yargs.command('repl <input>', 'Open the repl with the imported database loaded', yargs => {
+    }, runImportRepl)
   }, () => y.showHelp())
 
 y.argv
