@@ -1,6 +1,6 @@
 {
   "name": "ipsql",
-  "version": "0.0.0",
+  "version": "0.0.0-dev",
   "description": "Decentralized SQL Database",
   "main": "index.js",
   "type": "module",
