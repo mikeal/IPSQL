@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "bin": {
-    "ipsql": "./cli/cli.js"
+    "ipsql": "./cli/bin.js"
   },
   "scripts": {
     "build": "npm_config_yes=true npx ipjs@latest build --tests",
