@@ -81,7 +81,6 @@ const dbFromURI = async (uri, put) => {
   const remote = await client(+port, hostname)
   const cid = pathname.slice('/'.length)
   const get = async cid => {
-    console.log('get', cid.toString())
     const bytes = await remote.getBlock(cid.toString())
     const block = await createBlock(bytes, cid)
     return block
@@ -95,7 +94,21 @@ const readOnly = block => { throw new Error('Read-only storage mode, cannot writ
 const runQuery = async argv => {
   const db = await dbFromURI(argv.uri, readOnly)
   const results = await db.read(argv.sql)
-  console.log(JSON.stringify(results, null, 2))
+  let print
+  if (argv.format === 'json') {
+    print = obj => JSON.stringify(obj)
+  } else if (argv.format === 'csv') {
+    print = obj => obj.map(v => JSON.stringify(v)).join(',')
+  } else {
+    throw new Error('Unknown output format')
+  }
+  if (Array.isArray(results) && Array.isArray(results[0])) {
+    for (const row of results) {
+      console.log(print(row))
+    }
+  } else {
+    console.log(JSON.stringify(results))
+  }
 }
 
 const getTableName = argv => argv.tableName || argv.input.slice(argv.input.lastIndexOf('/') + 1)
