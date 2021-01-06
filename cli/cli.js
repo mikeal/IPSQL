@@ -35,7 +35,7 @@ const queryOptions = yargs => {
   })
   yargs.option('format', {
     describe: 'Output format',
-    default: 'json'
+    default: 'csv'
   })
 }
 
@@ -85,14 +85,14 @@ const dbFromURI = async (uri, put) => {
     const block = await createBlock(bytes, cid)
     return block
   }
-  const db = IPSQL.from(CID.parse(cid), { get, put, ...mkopts() })
-  return db
+  return { remote, database: () => IPSQL.from(CID.parse(cid), { get, put, ...mkopts() })}
 }
 
 const readOnly = block => { throw new Error('Read-only storage mode, cannot write blocks') }
 
 const runQuery = async argv => {
-  const db = await dbFromURI(argv.uri, readOnly)
+  const { database, remote } = await dbFromURI(argv.uri, readOnly)
+  const db = await database()
   const results = await db.read(argv.sql)
   let print
   if (argv.format === 'json') {
@@ -109,6 +109,7 @@ const runQuery = async argv => {
   } else {
     console.log(JSON.stringify(results))
   }
+  await remote.close()
 }
 
 const getTableName = argv => argv.tableName || argv.input.slice(argv.input.lastIndexOf('/') + 1)
@@ -126,7 +127,7 @@ const runImportServe = async argv => {
   const tableName = getTableName(argv)
   console.log('importing...')
   const db = await csv({ ...argv, ...mkopts(), ...store, input, tableName })
-  const { server, listen } = network(store)
+  const { server, listen } = network({store})
   const port = argv.port ? +argv.port : await getPort({ port: 8000 })
 
   let pub

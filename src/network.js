@@ -2,10 +2,14 @@ import znode from 'znode'
 import net from 'net'
 import { CID } from 'multiformats'
 
-const mkrpc = (store, socket) => {
+const mkrpc = ({store, socket, chunker, cache}) => {
   let remote
   const rpc = {
     version: 'v0',
+    query: async (cid, ...args) => {
+      const db = await IPSQL.from(CID.parse(cid), { ...store, chunker, cache })
+      return db.read(...args)
+    },
     getBlock: async (cid) => {
       if (typeof cid === 'string') cid = CID.parse(cid)
       const { bytes } = await store.get(cid)
@@ -17,7 +21,7 @@ const mkrpc = (store, socket) => {
   return { ...rpc, remote }
 }
 
-const create = (store) => {
+const create = (opts) => {
   const connections = {}
   const add = rpc => {
     connections[rpc.address()] = rpc
@@ -28,15 +32,19 @@ const create = (store) => {
     return connections[address]
   }
 
-  const server = net.createServer(async socket => add(mkrpc(store, socket)))
-  const client = (...address) => {
+  const server = net.createServer(async socket => add(mkrpc({ ...opts, socket })))
+  const client = async (...address) => {
     const cached = getConnection(...address)
     if (cached) return cached.remote
 
     const socket = net.connect(...address)
-    const rpc = mkrpc(store, socket)
+    const rpc = mkrpc({ ...opts, socket })
     add(rpc)
-    return rpc.remote
+    const close = () => new Promise(resolve => {
+      socket.on('close', resolve)
+      socket.end()
+    })
+    return { ...await rpc.remote, close }
   }
   const listen = (...args) => new Promise(resolve => server.listen(...args, resolve))
   return { client, server, connections, listen }
