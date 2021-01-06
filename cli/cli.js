@@ -1,13 +1,12 @@
-#!/usr/bin/env node
+import IPSQL from 'ipsql'
+import { createBlock } from 'ipsql/utils'
+import cache from 'ipsql/cache'
+import network from 'ipsql/network'
+import csv from 'ipsql/csv'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
-import IPSQL from '../src/index.js'
-import { bf } from 'chunky-trees/utils'
-import { createBlock } from '../src/utils.js'
-import cache from '../src/cache.js'
-import network from '../src/network.js'
 import { CID } from 'multiformats'
-import csv from '../src/csv.js'
+import { bf } from 'chunky-trees/utils'
 import fs from 'fs'
 import getPort from 'get-port'
 import publicIP from 'public-ip'
@@ -183,5 +182,7 @@ const y = yargs(hideBin(process.argv))
       importOptions(yargs)
     }, runImportRepl)
   }, () => y.showHelp())
+
+export default y
 
 if (y.argv._.length === 0) y.showHelp()

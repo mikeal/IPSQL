@@ -1,15 +1,14 @@
 {
-  "name": "IPSQL",
+  "name": "ipsql",
   "version": "0.0.0",
-  "description": "IPLD Schema",
+  "description": "Decentralized SQL Database",
   "main": "index.js",
   "type": "module",
   "bin": {
     "ipsql": "./cli/cli.js"
   },
   "scripts": {
-    "build": "npm run build:js && npm run build:types",
-    "build:js": "npm_config_yes=true npx ipjs@latest build --tests",
+    "build": "npm_config_yes=true npx ipjs@latest build --tests",
     "publish": "npm_config_yes=true npx ipjs@latest publish",
     "lint": "standard",
     "test:cjs": "npm run build:js && mocha dist/cjs/node-test/test-*.js && npm run test:cjs:browser",
@@ -23,6 +22,26 @@
   "keywords": [],
   "author": "Mikeal Rogers <mikeal.rogers@gmail.com> (https://www.mikealrogers.com/)",
   "license": "(Apache-2.0 AND MIT)",
+  "exports": {
+    ".": {
+      "import": "./src/index.js"
+    },
+    "./cli": {
+      "import": "./cli/cli.js"
+    },
+    "./utils": {
+      "import": "./src/utils.js"
+    },
+    "./cache": {
+      "import": "./src/cache.js"
+    },
+    "./network": {
+      "import": "./src/network.js"
+    },
+    "./csv": {
+      "import": "./src/csv.js"
+    }
+  },
   "devDependencies": {
     "hundreds": "0.0.9",
     "mocha": "^8.2.1",
