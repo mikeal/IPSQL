@@ -3,6 +3,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import IPSQL from '../src/index.js'
 import { bf } from 'chunky-trees/utils'
+import { createBlock } from '../src/utils.js'
 import cache from '../src/cache.js'
 import network from '../src/network.js'
 import { CID } from 'multiformats'
@@ -25,9 +26,9 @@ const importOptions = yargs => {
   })
 }
 
-const options = yargs => {
-  yargs.positional('cid', {
-    describe: 'CID (Content Identifier) of the IPSQL Database'
+const queryOptions = yargs => {
+  yargs.positional('URI', {
+    describe: 'URI for database'
   })
   yargs.positional('sql', {
     describe: 'SQL query string to run'
@@ -73,25 +74,47 @@ const getStore = argv => {
   return { get, put }
 }
 
-const run = async argv => {
-  const db = await getDatabase(argv, argv.cid)
+const dbFromURI = async (uri, put) => {
+  if (!uri.startsWith('tcp://')) throw new Error('Unsupported transport')
+  const { client } = network()
+  const { hostname, port, pathname } = new URL(uri)
+  const remote = await client(+port, hostname)
+  const cid = pathname.slice('/'.length)
+  const get = async cid => {
+    console.log('get', cid.toString())
+    const bytes = await remote.getBlock(cid.toString())
+    const block = await createBlock(bytes, cid)
+    return block
+  }
+  const db = IPSQL.from(CID.parse(cid), { get, put, ...mkopts() })
+  return db
+}
+
+const readOnly = block => { throw new Error('Read-only storage mode, cannot write blocks') }
+
+const runQuery = async argv => {
+  const db = await dbFromURI(argv.uri, readOnly)
   const results = await db.read(argv.sql)
   console.log(JSON.stringify(results, null, 2))
 }
 
+const getTableName = argv => argv.tableName || argv.input.slice(argv.input.lastIndexOf('/') + 1)
+
 const runImportExport = async argv => {
   const input = fs.readFileSync(argv.input).toString()
   const store = getStore(argv)
-  const db = await csv({ ...argv, ...mkopts(), ...store, input })
+  const tableName = getTableName(argv)
+  const db = await csv({ ...argv, ...mkopts(), ...store, input, tableName })
 }
 
 const runImportServe = async argv => {
   const input = fs.readFileSync(argv.input).toString()
   const store = inmem()
+  const tableName = getTableName(argv)
   console.log('importing...')
-  const db = await csv({ ...argv, ...mkopts(), ...store, input})
+  const db = await csv({ ...argv, ...mkopts(), ...store, input, tableName })
   const { server, listen } = network(store)
-  const port = argv.port ? +argv.port : await getPort(8000)
+  const port = argv.port ? +argv.port : await getPort({ port: 8000 })
 
   let pub
   if (argv.host.includes(':')) pub = await publicIP.v6()
@@ -108,7 +131,7 @@ const csvArgs = yargs => {
 }
 
 const y = yargs(hideBin(process.argv))
-  .command('query <uri> <sql>', 'Run IPSQL query', options, run)
+  .command('query <uri> <sql>', 'Run IPSQL query', queryOptions, runQuery)
   .command('import', 'Import CSV files', yargs => {
     yargs.command('export <input> <output>', 'Export blocks', yargs => {
       csvArgs(yargs)

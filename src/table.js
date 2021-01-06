@@ -45,11 +45,11 @@ const validate = (schema, val) => {
   if (dataType === 'VARCHAR') {
     if (value.length > length) throw new Error('Schema validation: value too long')
     if (type === 'string') return true
-    throw new Error('Invalid VARCHAR type')
+    throw new Error(`Invalid VARCHAR type ${type}`)
   }
   if (dataType === 'INT' || dataType === 'INTEGER') {
     if (type === 'number' && isInt(value)) return true
-    throw new Error('Invalid INT type')
+    throw new Error(`Invalid INT type ${type} ${value}`)
   }
   if (dataType === 'FLOAT') {
     if (type === 'number') return true
@@ -216,7 +216,10 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
       if (type !== 'expr_list') throw new Error('Not implemented')
       for (let i = 0; i < value.length; i++) {
         const schema = schemas[i]
-        const val = value[i]
+        let val = value[i]
+        if (val.type === 'unary_expr' && val.operator === '-') {
+          val = { type: 'number', value: -val.expr.value }
+        }
         validate(schema, val)
         if (ast.columns) {
           const columnName = ast.columns[i]

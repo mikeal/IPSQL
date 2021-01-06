@@ -32,10 +32,10 @@ const main = ({ input, db, get, put, tableName, cache, chunker }) => {
       const columns = []
       const skips = new Set()
       for (const column of meta.fields) {
-        if (types[column] === 'string') columns.push(`${column} VARCHAR(${sizes[column]})`)
-        if (types[column] === 'int') columns.push(`${column} INTEGER`)
-        if (types[column] === 'float') columns.push(`${column} FLOAT`)
-        if (types[column] === 'boolean') columns.push(`${column} INTEGER`)
+        if (types[column] === 'string') columns.push(`\`${column}\` VARCHAR(${sizes[column]})`)
+        if (types[column] === 'int') columns.push(`\`${column}\` INTEGER`)
+        if (types[column] === 'float') columns.push(`\`${column}\` FLOAT`)
+        if (types[column] === 'boolean') columns.push(`\`${column}\` INTEGER`)
         if (!types[column]) skips.add(column)
       }
       let sql = `CREATE TABLE \`${tableName}\` (${columns.join(', ')})`
@@ -54,8 +54,18 @@ const main = ({ input, db, get, put, tableName, cache, chunker }) => {
 
       sql = `INSERT INTO \`${tableName}\` VALUES ${data.map(row => {
         const ret = []
+        const _columns = [...columns]
         for (const column of meta.fields) {
-          if (!skips.has(column)) ret.push(JSON.stringify(row[column]))
+          let value = row[column]
+          const c = _columns.shift()
+          if (typeof value === 'number' && !c.endsWith('INTEGER')) {
+            value = value.toString()
+          }
+          if (value === 'NULL') value = null
+          if (!skips.has(column)) {
+            if (value === null) ret.push('NULL')
+            else ret.push(JSON.stringify(value))
+          }
         }
         return `( ${ret.join(', ')} )`
       }).join(', ')}`
