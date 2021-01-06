@@ -5,7 +5,7 @@ const defaults = { header: true, dynamicTyping: true }
 
 const isInt = n => n % 1 === 0
 
-const main = ({ input, db, ipfs, tableName, cache, chunker }) => {
+const main = ({ input, db, get, put, tableName, cache, chunker }) => {
   return new Promise((resolve, reject) => {
     const complete = async results => {
       const { data, meta } = results
@@ -39,7 +39,8 @@ const main = ({ input, db, ipfs, tableName, cache, chunker }) => {
         if (!types[column]) skips.add(column)
       }
       let sql = `CREATE TABLE \`${tableName}\` (${columns.join(', ')})`
-      let db = await IPSQL.create(sql, { ipfs, chunker, cache })
+      console.log(sql)
+      let db = await IPSQL.create(sql, { get, put, chunker, cache })
 
       // hack: this fixes an apparent bug in papaparse
       const fix = () => {

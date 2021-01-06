@@ -38,7 +38,7 @@ const create = (store) => {
     add(rpc)
     return rpc.remote
   }
-  const listen = (...args) => new Promise(resolve => server.listen(...args))
+  const listen = (...args) => new Promise(resolve => server.listen(...args, resolve))
   return { client, server, connections, listen }
 }
 

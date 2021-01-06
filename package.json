@@ -24,6 +24,7 @@
     "@textile/ipfs-lite": "^0.1.6",
     "chunky-trees": "^0.3.2",
     "dag-service": "0.0.0-dev",
+    "get-port": "^5.1.1",
     "interface-datastore": "^2.0.1",
     "ipfs": "^0.52.3",
     "ipfs-repo": "^7.0.0",
@@ -35,6 +36,7 @@
     "libp2p-tcp": "^0.15.1",
     "multiformats": "^4.4.1",
     "papaparse": "^5.3.0",
+    "public-ip": "^4.0.3",
     "tempy": "^1.0.0",
     "yargs": "^16.2.0",
     "znode": "^1.1.5"
