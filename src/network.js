@@ -3,8 +3,7 @@ import net from 'net'
 import IPSQL from './index.js'
 import { CID } from 'multiformats'
 
-const mkrpc = ({store, socket, chunker, cache}) => {
-  let remote
+const mkrpc = ({ store, socket, chunker, cache }) => {
   const rpc = {
     version: 'v0',
     query: async (cid, q) => {
@@ -18,7 +17,7 @@ const mkrpc = ({store, socket, chunker, cache}) => {
     },
     address: () => socket.remoteAddress + ':' + socket.remotePort
   }
-  remote = znode(socket, rpc)
+  const remote = znode(socket, rpc)
   return { ...rpc, remote }
 }
 
@@ -52,4 +51,3 @@ const create = (opts) => {
 }
 
 export default create
-

@@ -28,7 +28,7 @@ const ipfsStore = ipfs => {
     waitingGets.delete(key)
     return createBlock(data, cid)
   }
-  const put = async (block, retries=3) => {
+  const put = async (block, retries = 3) => {
     const key = block.cid.toString()
     waitingPuts.add(key)
     const opts = { cid: key, timeout: 1000 }
@@ -36,7 +36,7 @@ const ipfsStore = ipfs => {
     // there's no transactional integrity due to bugs in js-ipfs,
     // we have to stat the cid to know when it's available and sometimes it never is
     // and we need to retry the entire write
-    let _stat = await stat(key)
+    const _stat = await stat(key)
     if (!_stat) {
       if (retries) return put(block, retries - 1)
       else throw new Error('Put failed')

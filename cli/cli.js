@@ -16,14 +16,14 @@ import repl from './repl.js'
 const chunker = bf(256)
 
 const importOptions = yargs => {
-  yargs.positional('file', {
-    describe: 'CSV file to import'
-  })
   yargs.option('database', {
     describe: 'Optional IPSQL database to import into. New DB will be created if not set'
   })
   yargs.option('tableName', {
     describe: 'Optional Table Name. One will be generated from the import file if not set'
+  })
+  yargs.positional('input', {
+    describe: 'CSV input file'
   })
 }
 
@@ -94,7 +94,7 @@ const fromURI = async (uri, put, store) => {
     const block = await createBlock(bytes, cid)
     return block
   }
-  return { remote, cid, database: () => IPSQL.from(CID.parse(cid), { get, put, ...mkopts() })}
+  return { remote, cid, database: () => IPSQL.from(CID.parse(cid), { get, put, ...mkopts() }) }
 }
 
 const readOnly = block => { throw new Error('Read-only storage mode, cannot write blocks') }
@@ -140,6 +140,8 @@ const preImport = async (argv, store) => {
 
 const runImportExport = async (argv) => {
   const { db } = await preImport(argv)
+  console.log(db.cid.toString())
+  console.log('Not Implemented')
 }
 
 const runImportRepl = async (argv) => {
@@ -150,8 +152,8 @@ const runImportRepl = async (argv) => {
 
 const runImportServe = async argv => {
   console.log('importing...')
-  const { db, tableName, store } = await preImport(argv, inmem())
-  const { server, listen } = network({store})
+  const { db, store } = await preImport(argv, inmem())
+  const { listen } = network({ store })
   const port = argv.port ? +argv.port : await getPort({ port: 8000 })
 
   let pub
@@ -159,13 +161,7 @@ const runImportServe = async argv => {
   else pub = await publicIP.v4()
 
   await listen(port)
-  console.log(`tcp://${ pub }:${ port }/${ db.cid.toString() }`)
-}
-
-const csvArgs = yargs => {
-  yargs.positional('input', {
-    describe: 'CSV input file'
-  })
+  console.log(`tcp://${pub}:${port}/${db.cid.toString()}`)
 }
 
 const y = yargs(hideBin(process.argv))
@@ -173,19 +169,19 @@ const y = yargs(hideBin(process.argv))
   .command('repl <uri>', 'Run local REPL', queryOptions, runRepl)
   .command('import', 'Import CSV files', yargs => {
     yargs.command('export <input> <output>', 'Export blocks', yargs => {
-      csvArgs(yargs)
+      importOptions(yargs)
       yargs.positional('output', {
         describe: 'File to export to. File extension selects export type'
       })
     }, runImportExport)
     yargs.command('serve <input> [port] [host]', 'Serve the imported database', yargs => {
-      csvArgs(yargs)
+      importOptions(yargs)
       yargs.positional('port', { describe: 'PORT to bind to' })
       yargs.positional('host', { describe: 'HOST IP address', default: '0.0.0.0' })
     }, runImportServe)
-    yargs.command('repl <input>', 'Open the repl with the imported database loaded', yargs => {
-      csvArgs(yargs)
+    yargs.command('repl <input>', 'Start REPL for imported db', yargs => {
+      importOptions(yargs)
     }, runImportRepl)
   }, () => y.showHelp())
 
-y.argv
+if (y.argv._.length === 0) y.showHelp()

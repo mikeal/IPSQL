@@ -1,9 +1,7 @@
 import { CID } from 'multiformats'
 import { Database } from './database.js'
 import { nocache } from 'chunky-trees/cache'
-import { createBlock } from './utils.js'
 import { bf } from 'chunky-trees/utils'
-import ipfsStore from './ipfs.js'
 
 const immutable = (obj, props) => {
   for (const [key, value] of Object.entries(props)) {
@@ -47,23 +45,12 @@ class IPSQL {
   static create (q, opts) {
     opts.cache = opts.cache || defaults.cache
     opts.chunker = opts.chunker || defaults.chunker
-    if (opts.ipfs) {
-      const store = ipfsStore(opts.ipfs)
-      opts.get = store.get
-      opts.put = store.put
-    }
     const db = new IPSQL({ ...opts, db: Database.create(opts) })
     return db.write(q)
   }
 
-  static async from (cid, { ipfs, get, put, cache, chunker }) {
+  static async from (cid, { get, put, cache, chunker }) {
     if (typeof cid === 'string') cid = CID.parse(cid)
-    let store
-    if (ipfs) {
-      const store = ipfsStore(ipfs)
-      get = store.get
-      put = store.put
-    }
     const opts = { get, cache: cache || defaults.cache, chunker: chunker || defaults.chunker }
     const db = await Database.from(cid, opts)
     return new IPSQL({ ...opts, put, db, cid })

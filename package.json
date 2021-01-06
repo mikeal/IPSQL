@@ -5,11 +5,20 @@
   "main": "index.js",
   "type": "module",
   "bin": {
-    "ipsql": "bin/bin.js"
+    "ipsql": "./cli/cli.js"
   },
   "scripts": {
-    "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080",
-    "test": "standard && mocha test/test-*.js"
+    "build": "npm run build:js && npm run build:types",
+    "build:js": "npm_config_yes=true npx ipjs@latest build --tests",
+    "publish": "npm_config_yes=true npx ipjs@latest publish",
+    "lint": "standard",
+    "test:cjs": "npm run build:js && mocha dist/cjs/node-test/test-*.js && npm run test:cjs:browser",
+    "test:node": "mocha test/test-*.js",
+    "test:cjs:browser": "polendina --cleanup dist/cjs/browser-test/test-*.js",
+    "test": "standard && npm run test:node",
+    "test:node-v12": "mocha test/test-*.js && npm run test:cjs",
+    "test:node-v14": "npm run test:node-v12",
+    "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080"
   },
   "keywords": [],
   "author": "Mikeal Rogers <mikeal.rogers@gmail.com> (https://www.mikealrogers.com/)",

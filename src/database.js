@@ -140,8 +140,7 @@ class Select {
       let data = results.map(r => r.columns)
       if (!this.ast.columns || this.ast.columns === '*') {
         return data
-      }
-      else {
+      } else {
         if (this.ast.columns.length === 1 && this.ast.columns[0].expr.type === 'aggr_func') {
           const { name } = this.ast.columns[0].expr
           if (name === 'COUNT') return data.length
