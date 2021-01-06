@@ -85,15 +85,14 @@ const dbFromURI = async (uri, put) => {
     const block = await createBlock(bytes, cid)
     return block
   }
-  return { remote, database: () => IPSQL.from(CID.parse(cid), { get, put, ...mkopts() })}
+  return { remote, cid, database: () => IPSQL.from(CID.parse(cid), { get, put, ...mkopts() })}
 }
 
 const readOnly = block => { throw new Error('Read-only storage mode, cannot write blocks') }
 
 const runQuery = async argv => {
-  const { database, remote } = await dbFromURI(argv.uri, readOnly)
-  const db = await database()
-  const results = await db.read(argv.sql)
+  const { remote, cid } = await dbFromURI(argv.uri, readOnly)
+  const { result } = await remote.query(cid, argv.sql)
   let print
   if (argv.format === 'json') {
     print = obj => JSON.stringify(obj)
@@ -102,12 +101,12 @@ const runQuery = async argv => {
   } else {
     throw new Error('Unknown output format')
   }
-  if (Array.isArray(results) && Array.isArray(results[0])) {
-    for (const row of results) {
+  if (Array.isArray(result) && Array.isArray(result[0])) {
+    for (const row of result) {
       console.log(print(row))
     }
   } else {
-    console.log(JSON.stringify(results))
+    console.log(JSON.stringify(result))
   }
   await remote.close()
 }

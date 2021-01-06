@@ -1,14 +1,15 @@
 import znode from 'znode'
 import net from 'net'
+import IPSQL from './index.js'
 import { CID } from 'multiformats'
 
 const mkrpc = ({store, socket, chunker, cache}) => {
   let remote
   const rpc = {
     version: 'v0',
-    query: async (cid, ...args) => {
+    query: async (cid, q) => {
       const db = await IPSQL.from(CID.parse(cid), { ...store, chunker, cache })
-      return db.read(...args)
+      return db.read(q, true)
     },
     getBlock: async (cid) => {
       if (typeof cid === 'string') cid = CID.parse(cid)

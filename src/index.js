@@ -38,10 +38,10 @@ class IPSQL {
     return new IPSQL({ get, put, db, cid: last.cid })
   }
 
-  async read (q) {
+  async read (q, full) {
     const result = this.db.sql(q)
-    const all = await result.all()
-    return all
+    const data = await result.all(full)
+    return data
   }
 
   static create (q, opts) {

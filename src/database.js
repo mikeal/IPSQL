@@ -132,31 +132,38 @@ class Select {
     return results
   }
 
-  async all () {
+  async all (full) {
     const results = await this._all()
-    let data = results.map(r => r.columns)
-    if (!this.ast.columns || this.ast.columns === '*') return data
-    else {
-      if (this.ast.columns.length === 1 && this.ast.columns[0].expr.type === 'aggr_func') {
-        const { name } = this.ast.columns[0].expr
-        if (name === 'COUNT') return data.length
-        data = data.map(([i]) => i)
-        if (name === 'MIN' || name === 'MAX') {
-          data = data.sort()
-          if (name === 'MIN') return data[0]
-          if (name === 'MAX') return data[data.length - 1]
+    const ret = data => full ? { result: data } : data
+
+    const _run = () => {
+      let data = results.map(r => r.columns)
+      if (!this.ast.columns || this.ast.columns === '*') {
+        return data
+      }
+      else {
+        if (this.ast.columns.length === 1 && this.ast.columns[0].expr.type === 'aggr_func') {
+          const { name } = this.ast.columns[0].expr
+          if (name === 'COUNT') return data.length
+          data = data.map(([i]) => i)
+          if (name === 'MIN' || name === 'MAX') {
+            data = data.sort()
+            if (name === 'MIN') return data[0]
+            if (name === 'MAX') return data[data.length - 1]
+          }
+          const reduced = data.reduce((a, b) => a + b)
+          if (name === 'SUM') return reduced
+          if (name === 'AVG') return reduced / data.length
+          throw new Error('Not Implemented')
         }
-        const reduced = data.reduce((a, b) => a + b)
-        if (name === 'SUM') return reduced
-        if (name === 'AVG') return reduced / data.length
-        throw new Error('Not Implemented')
+        for (const col of this.ast.columns) {
+          const { type } = col.expr
+          if (type !== 'column_ref') throw new Error('Not Implemented')
+        }
+        return data
       }
-      for (const col of this.ast.columns) {
-        const { type } = col.expr
-        if (type !== 'column_ref') throw new Error('Not Implemented')
-      }
-      return data
     }
+    return ret(_run())
   }
 }
 
