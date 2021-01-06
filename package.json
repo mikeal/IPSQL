@@ -23,6 +23,7 @@
     "@ipld/dag-cbor": "^2.0.3",
     "@textile/ipfs-lite": "^0.1.6",
     "chunky-trees": "^0.3.2",
+    "cliffy": "^2.4.2",
     "dag-service": "0.0.0-dev",
     "get-port": "^5.1.1",
     "interface-datastore": "^2.0.1",

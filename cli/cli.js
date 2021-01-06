@@ -11,6 +11,7 @@ import csv from '../src/csv.js'
 import fs from 'fs'
 import getPort from 'get-port'
 import publicIP from 'public-ip'
+import repl from './repl.js'
 
 const chunker = bf(256)
 
@@ -66,7 +67,7 @@ const getStore = argv => {
     store = inmem()
     get = store.get
   }
-  if (argv.output === 'inmem' || arv.input === 'inmemory') {
+  if (argv.output === 'inmem' || argv.input === 'inmemory') {
     if (!store) store = inmem()
     put = store.put
   }
@@ -126,7 +127,9 @@ const runImportExport = async (argv) => {
 }
 
 const runImportRepl = async (argv) => {
-  const { db, store } = await preImport(argv)
+  const { db, store } = await preImport(argv, inmem())
+  const cli = repl({ db, store, ...mkopts() })
+  cli.show()
 }
 
 const runImportServe = async argv => {
@@ -164,6 +167,7 @@ const y = yargs(hideBin(process.argv))
       yargs.positional('host', { describe: 'HOST IP address', default: '0.0.0.0' })
     }, runImportServe)
     yargs.command('repl <input>', 'Open the repl with the imported database loaded', yargs => {
+      csvArgs(yargs)
     }, runImportRepl)
   }, () => y.showHelp())
 
