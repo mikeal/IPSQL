@@ -43,6 +43,17 @@ class IPSQL {
   async read (q, full) {
     const result = this.db.sql(q)
     const data = await result.all(full)
+    if (full) {
+      for (const table of Object.values(this.db.tables)) {
+        data.cids.add(table)
+        data.cids.add(table.rows)
+        for (const column of table.columns) {
+          data.cids.add(column)
+          data.cids.add(column.index)
+        }
+      }
+    }
+    await data.cids.all()
     return data
   }
 

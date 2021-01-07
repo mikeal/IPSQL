@@ -97,7 +97,12 @@ const fromURI = async (uri, put, store) => {
     const reader = await CarReader.fromIterable(fs.createReadStream(uri))
     const [ root ] = await reader.getRoots()
     cid = root
-    getBlock = cid => reader.get(cid).then(({ bytes, cid }) => createBlock(bytes, cid))
+    getBlock = async cid => {
+      const block = await reader.get(cid)
+      if (!block) throw new Error('Not found')
+      const { bytes } = block
+      return createBlock(bytes, cid)
+    }
     query = async (cid, sql) => {
       const db = await IPSQL.from(cid, {get: getBlock, put: readOnly, ...mkopts()})
       const { result, cids } = await db.read(sql, true)
@@ -141,7 +146,7 @@ const runExport = async ({ argv, cids, root, getBlock, store }) => {
   for (const key of cids) {
     const cid = CID.parse(key)
     if (!(await has(cid))) {
-      const p = getBlock(key, cid).then(block => writer.put(block))
+      const p = getBlock(cid).then(block => writer.put(block))
       promises.push(p)
     }
   }
