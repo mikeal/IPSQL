@@ -63,8 +63,9 @@ const notsupported = select => {
   })
 }
 
-const runSelect = async function * (select) {
-  for await (const { entry, table } of select.where()) {
+const runSelect = async function * (select, cids) {
+  for await (const { entry, table } of select.where(cids)) {
+    cids.add({ address: entry.value })
     const result = await select.columns(entry, table)
     yield { entry, table, ...result }
   }
@@ -72,6 +73,8 @@ const runSelect = async function * (select) {
 
 const runWhere = async function * (select, cids) {
   const tables = select.ast.from.map(({ table }) => select.db.tables[table])
+  cids.add(select.db)
+  tables.forEach(t => cids.add(t))
   if (select.ast.where === null) {
     for (const table of tables) {
       if (!table.rows) continue

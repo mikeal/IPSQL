@@ -9,7 +9,7 @@ const mkrpc = ({ store, socket, chunker, cache }) => {
     query: async (cid, q) => {
       const db = await IPSQL.from(CID.parse(cid), { ...store, chunker, cache })
       const { result, cids } = await db.read(q, true)
-      return { result, cids: await cids.all() }
+      return { result, cids: [...await cids.all()] }
     },
     getBlock: async (cid) => {
       if (typeof cid === 'string') cid = CID.parse(cid)

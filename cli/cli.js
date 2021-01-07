@@ -8,9 +8,11 @@ import { hideBin } from 'yargs/helpers'
 import { CID } from 'multiformats'
 import { bf } from 'chunky-trees/utils'
 import fs from 'fs'
+import { Readable } from 'stream'
 import getPort from 'get-port'
 import publicIP from 'public-ip'
 import repl from './repl.js'
+import { CarReader, CarWriter } from '@ipld/car'
 
 const chunker = bf(256)
 
@@ -36,6 +38,9 @@ const queryOptions = yargs => {
   yargs.option('format', {
     describe: 'Output format',
     default: 'csv'
+  })
+  yargs.option('export', {
+    describe: 'Export blocks for query'
   })
 }
 
@@ -79,7 +84,7 @@ const fromURI = async (uri, put, store) => {
   const { client } = network()
   const { hostname, port, pathname } = new URL(uri)
   const remote = await client(+port, hostname)
-  const cid = pathname.slice('/'.length)
+  const cid = CID.parse(pathname.slice('/'.length))
   const get = async cid => {
     if (store) {
       try {
@@ -98,9 +103,36 @@ const fromURI = async (uri, put, store) => {
 
 const readOnly = block => { throw new Error('Read-only storage mode, cannot write blocks') }
 
+const runExport = async ({ argv, cids, root, remote }) => {
+  if (!argv.export.endsWith('.car')) throw new Error('Can only export CAR files')
+  let has = () => false
+  if (argv.diff) {
+    if (!argv.diff.endsWith('.car')) throw new Error('Can only diff CAR files')
+    const inStream = fs.createReadStream(argv.diff)
+    const { reader } = CarReader.fromIterable(inStream)
+    has = cid => reader.has(cid)
+  }
+  const { writer, out } = await CarWriter.create([root])
+  Readable.from(out).pipe(fs.createWriteStream(argv.export))
+  const promises = []
+  for (const key of cids) {
+    const cid = CID.parse(key)
+    if (!(await has(cid))) {
+      const p = remote.getBlock(key).then(bytes => writer.put({ bytes, cid }))
+      promises.push(p)
+    }
+  }
+  await Promise.all(promises)
+  await writer.close()
+}
+
 const runQuery = async argv => {
   const { remote, cid } = await fromURI(argv.uri, readOnly)
-  const { result } = await remote.query(cid.toString(), argv.sql)
+  const { result, cids } = await remote.query(cid.toString(), argv.sql)
+
+  let exporter
+  if (argv.export) exporter = runExport({ argv, cids, root: cid, remote })
+
   let print
   if (argv.format === 'json') {
     print = obj => JSON.stringify(obj)
@@ -116,6 +148,8 @@ const runQuery = async argv => {
   } else {
     console.log(JSON.stringify(result))
   }
+
+  await exporter
   await remote.close()
 }
 

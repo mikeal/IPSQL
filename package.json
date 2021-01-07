@@ -47,6 +47,7 @@
     "standard": "^16.0.3"
   },
   "dependencies": {
+    "@ipld/car": "^0.1.2",
     "@ipld/dag-cbor": "^2.0.3",
     "chunky-trees": "^1.0.0",
     "cliffy": "^2.4.2",
