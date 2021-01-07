@@ -1,7 +1,9 @@
 import { create as createSparseArray, load as loadSparseArray } from 'chunky-trees/sparse-array'
 import { create as createDBIndex, load as loadDBIndex } from 'chunky-trees/db-index'
-
+import { CIDCounter } from 'chunky-trees/utils'
 import { encode, mf, SQLBase, getNode } from './utils.js'
+
+const pluck = node => node.result
 
 class Column extends SQLBase {
   constructor ({ schema, index, ...opts }) {
@@ -177,6 +179,7 @@ class Row {
 }
 
 const tableInsert = async function * (table, ast, { database, chunker }) {
+  const cids = new CIDCounter()
   const { get, cache } = database
 
   const { values } = ast
@@ -188,10 +191,10 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
     let entries
     if (ast.where) {
       const where = new Where(database, ast.where, table)
-      const all = await where.asMap()
+      const all = await where.asMap(cids)
       entries = [...all.entries()].map(([key, value]) => ({ key, value }))
     } else {
-      entries = await table.rows.getAllEntries()
+      entries = await table.rows.getAllEntries(cids).then(pluck)
     }
     const blocks = []
     const _doEntry = async entry => {
@@ -369,11 +372,14 @@ class Where {
     this.table = table
   }
 
-  async all () {
+  async all (cids) {
+    if (!cids) throw new Error('missing cids')
     const where = this.ast
     const { table, db } = this
     if (where.type !== 'binary_expr') throw new Error('Not Implemented')
     if (where.left.table) throw new Error('Not Implemented')
+
+    const pluck = node => node.result
 
     let results
     if (where.operator === 'AND' || where.operator === 'OR') {
@@ -390,12 +396,12 @@ class Where {
         if (typeof start === 'undefined' || typeof end === 'undefined') {
           throw new Error('Invalid operator combination, missing start or end')
         }
-        return column.index.getRangeEntries([start, 0], [end, 0])
+        return column.index.getRangeEntries([start, 0], [end, 0], cids).then(pluck)
       }
 
       const left = new Where(db, where.left, table)
       const right = new Where(db, where.right, table)
-      const [ll, rr] = await Promise.all([left.asMap(), right.asMap()])
+      const [ll, rr] = await Promise.all([left.asMap(cids), right.asMap(cids)])
       if (where.operator === 'OR') {
         const all = new Map([...ll.entries(), ...rr.entries()])
         results = [...all.keys()].sort().map(k => ({ key: k, value: all.get(k) }))
@@ -407,21 +413,21 @@ class Where {
     } else if (where.operator === '=') {
       const { index } = table.getColumn(where.left.column)
       const { value } = where.right
-      results = await index.getRangeEntries([value, 0], [value, Infinity])
+      results = await index.getRangeEntries([value, 0], [value, Infinity], cids).then(pluck)
     } else if (rangeOperators.has(where.operator)) {
       const column = table.getColumn(where.left.column)
       let { start, end } = getRangeQuery(where, column)
       if (typeof start === 'undefined') start = absoluteStart(column)
       if (typeof end === 'undefined') end = absoluteEnd(column)
-      results = await column.index.getRangeEntries([start, 0], [end, 0])
+      results = await column.index.getRangeEntries([start, 0], [end, 0], cids).then(pluck)
     } else {
       throw new Error('Not Implemented')
     }
     return results
   }
 
-  async asMap () {
-    const results = await this.all()
+  async asMap (cids) {
+    const results = await this.all(cids)
     return new Map(results.map(r => {
       if (Array.isArray(r.key)) return [r.key[1], r.value]
       return [r.key, r.value]

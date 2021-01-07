@@ -1,5 +1,6 @@
 import sql from 'node-sql-parser'
 import { SQLBase, getNode } from './utils.js'
+import { CIDCounter } from 'chunky-trees/utils'
 import { createTable, Table, Where, Row } from './table.js'
 
 const { entries, fromEntries } = Object
@@ -69,12 +70,12 @@ const runSelect = async function * (select) {
   }
 }
 
-const runWhere = async function * (select) {
+const runWhere = async function * (select, cids) {
   const tables = select.ast.from.map(({ table }) => select.db.tables[table])
   if (select.ast.where === null) {
     for (const table of tables) {
       if (!table.rows) continue
-      const iter = await table.rows.getAllEntries()
+      const { result: iter } = await table.rows.getAllEntries(cids)
       for (const entry of iter) {
         yield { entry, table }
       }
@@ -83,7 +84,7 @@ const runWhere = async function * (select) {
     for (const table of tables) {
       if (!table.rows) continue
       const w = new Where(select.db, select.ast.where, table)
-      const results = await w.all()
+      const results = await w.all(cids)
       yield * results.map(entry => ({ entry, table }))
     }
   }
@@ -104,17 +105,17 @@ class Select {
     return { row, columns: row.columns(this.ast.columns) }
   }
 
-  where () {
-    return runWhere(this)
+  where (cids = new CIDCounter()) {
+    return runWhere(this, cids)
   }
 
-  run () {
-    return runSelect(this)
+  run (cids) {
+    return runSelect(this, cids)
   }
 
-  async _all () {
+  async _all (cids) {
     let results = []
-    for await (const result of this.run()) {
+    for await (const result of this.run(cids)) {
       results.push(result)
     }
     if (this.ast.orderby) {
@@ -132,9 +133,9 @@ class Select {
     return results
   }
 
-  async all (full) {
-    const results = await this._all()
-    const ret = data => full ? { result: data } : data
+  async all (full, cids = new CIDCounter()) {
+    const results = await this._all(cids)
+    const ret = data => full ? { result: data, cids } : data
 
     const _run = () => {
       let data = results.map(r => r.columns)
