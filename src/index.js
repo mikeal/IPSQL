@@ -18,6 +18,10 @@ class IPSQL {
     immutable(this, props)
   }
 
+  cids () {
+    return this.db.cids()
+  }
+
   get id () {
     return this.cid.toString()
   }

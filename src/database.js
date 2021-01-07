@@ -14,6 +14,23 @@ class Database extends SQLBase {
     this.chunker = chunker
   }
 
+  async cids () {
+    const cids = new Set()
+    const recurse = async cid => {
+      let key = cid.toString()
+      if (cids.has(key)) return
+      cids.add(key)
+      const block = await this.get(cid)
+      const promises = []
+      for (const [, link] of block.links()) {
+        promises.push(recurse(link))
+      }
+      return Promise.all(promises)
+    }
+    await recurse(await this.address)
+    return cids
+  }
+
   createTable (ast) {
     return createTable(this, ast)
   }

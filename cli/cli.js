@@ -80,11 +80,31 @@ const getStore = argv => {
 }
 
 const fromURI = async (uri, put, store) => {
-  if (!uri.startsWith('tcp://')) throw new Error('Unsupported transport')
-  const { client } = network()
-  const { hostname, port, pathname } = new URL(uri)
-  const remote = await client(+port, hostname)
-  const cid = CID.parse(pathname.slice('/'.length))
+  let cid
+  let getBlock
+  let query
+  let close
+  if (uri.startsWith('tcp://')) {
+    const { client } = network()
+    const { hostname, port, pathname } = new URL(uri)
+    const remote = await client(+port, hostname)
+    cid = CID.parse(pathname.slice('/'.length))
+    getBlock = cid => remote.getBlock(cid.toString()).then(bytes => createBlock(bytes, cid))
+    query = (cid, sql) => remote.query(cid.toString(), sql)
+    close = () => remote.close()
+  } else {
+    if (!uri.endsWith('.car')) throw new Error('Unknown uri')
+    const reader = await CarReader.fromIterable(fs.createReadStream(uri))
+    const [ root ] = await reader.getRoots()
+    cid = root
+    getBlock = cid => reader.get(cid).then(({ bytes, cid }) => createBlock(bytes, cid))
+    query = async (cid, sql) => {
+      const db = await IPSQL.from(cid, {get: getBlock, put: readOnly, ...mkopts()})
+      const { result, cids } = await db.read(sql, true)
+      return { result, cids: await cids.all() }
+    }
+    close = () => {}
+  }
   const get = async cid => {
     if (store) {
       try {
@@ -94,16 +114,16 @@ const fromURI = async (uri, put, store) => {
         if (!e.message.toLowerCase().includes('not found')) throw e
       }
     }
-    const bytes = await remote.getBlock(cid.toString())
-    const block = await createBlock(bytes, cid)
+    const block = await getBlock(cid)
     return block
   }
-  return { remote, cid, database: () => IPSQL.from(CID.parse(cid), { get, put, ...mkopts() }) }
+  return { cid, close, getBlock, query, database: () => IPSQL.from(CID.parse(cid), { get, put, ...mkopts() }) }
 }
 
 const readOnly = block => { throw new Error('Read-only storage mode, cannot write blocks') }
 
-const runExport = async ({ argv, cids, root, remote }) => {
+const runExport = async ({ argv, cids, root, getBlock, store }) => {
+  if (!cids) throw new Error('asdf')
   if (!argv.export.endsWith('.car')) throw new Error('Can only export CAR files')
   let has = () => false
   if (argv.diff) {
@@ -114,11 +134,14 @@ const runExport = async ({ argv, cids, root, remote }) => {
   }
   const { writer, out } = await CarWriter.create([root])
   Readable.from(out).pipe(fs.createWriteStream(argv.export))
+  if (store) {
+    getBlock = cid => store.get(cid)
+  }
   const promises = []
   for (const key of cids) {
     const cid = CID.parse(key)
     if (!(await has(cid))) {
-      const p = remote.getBlock(key).then(bytes => writer.put({ bytes, cid }))
+      const p = getBlock(key, cid).then(block => writer.put(block))
       promises.push(p)
     }
   }
@@ -127,11 +150,11 @@ const runExport = async ({ argv, cids, root, remote }) => {
 }
 
 const runQuery = async argv => {
-  const { remote, cid } = await fromURI(argv.uri, readOnly)
-  const { result, cids } = await remote.query(cid.toString(), argv.sql)
+  const { query, getBlock, cid, store, close } = await fromURI(argv.uri, readOnly)
+  const { result, cids } = await query(cid, argv.sql)
 
   let exporter
-  if (argv.export) exporter = runExport({ argv, cids, root: cid, remote })
+  if (argv.export) exporter = runExport({ argv, cids, root: cid, query, getBlock })
 
   let print
   if (argv.format === 'json') {
@@ -150,7 +173,7 @@ const runQuery = async argv => {
   }
 
   await exporter
-  await remote.close()
+  await close()
 }
 
 const runRepl = async argv => {
@@ -172,9 +195,10 @@ const preImport = async (argv, store) => {
 }
 
 const runImportExport = async (argv) => {
-  const { db } = await preImport(argv)
-  console.log(db.cid.toString())
-  console.log('Not Implemented')
+  argv.export = argv.output
+  const { db, store } = await preImport(argv, inmem())
+  const cids = await db.cids()
+  await runExport({ argv, cids, root: db.cid, store })
 }
 
 const runImportRepl = async (argv) => {
