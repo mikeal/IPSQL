@@ -34,7 +34,8 @@ The generated SQL for `CREATE` is printed so that you can see the schema.
 The last line is a url you can use in the `ipsql` cli to query this database remotely.
 
 ```
-$ ipsql query tcp://45.14.71.183:42597/bafyreigdp3e2kkovjpky2sy7nq3qhwrkifk7a2ve7gk7zgvpyzmncwiwoa 'SELECT empire from `empires.csv` WHERE country_name = "Egypt"'
+$ ipsql query tcp://45.14.71.183:42597/bafyreigdp3e2kkovjpky2sy7nq3qhwrkifk7a2ve7gk7zgvpyzmncwiwoa \
+  'SELECT empire from `empires.csv` WHERE country_name = "Egypt"'
 "Achaemenid Empire"
 "Ayyubid Dynasty"
 "British Empire"
