@@ -26,10 +26,6 @@ be replaced by a better p2p protocol.
 $ ipsql import serve empire.csv
 importing...
 CREATE TABLE `empires.csv` (`empire` VARCHAR(30), `empire_start` INTEGER, `empire_end` INTEGER, `god` INTEGER, `king` INTEGER, `coin` INTEGER, `trade` VARCHAR(4), `country_name` VARCHAR(32), `country_iso` VARCHAR(3), `geo` VARCHAR(8), `begin` INTEGER, `end` INTEGER, `capital` INTEGER)
-tcp://35.164.76.184:42597/bafyreigdp3e2kkovjpky2sy7nq3qhwrkifk7a2ve7gk7zgvpyzmncwiwoaimporting...
-CREATE TABLE `empires.csv` (`empire` VARCHAR(30), `empire_start` INTEGER, `empire_end` INTEGER, `god` INTEGER, `king` INTEGER, `coin` INTEGER, `trade` VARCHAR(4), `country_name` VARCHAR(32), `country_iso` VARCHAR(3), `geo` VARCHAR(8), `begin` INTEGER, `end` INTEGER, `capital` INTEGER)
-tcp://35.164.76.184:42597/bafyreigdp3e2kkovjpky2sy7nq3qhwrkifk7a2ve7gk7zgvpyzmncwiwoaimporting...
-CREATE TABLE `empires.csv` (`empire` VARCHAR(30), `empire_start` INTEGER, `empire_end` INTEGER, `god` INTEGER, `king` INTEGER, `coin` INTEGER, `trade` VARCHAR(4), `country_name` VARCHAR(32), `country_iso` VARCHAR(3), `geo` VARCHAR(8), `begin` INTEGER, `end` INTEGER, `capital` INTEGER)
 tcp://45.14.71.183:42597/bafyreigdp3e2kkovjpky2sy7nq3qhwrkifk7a2ve7gk7zgvpyzmncwiwoa
 ```
 
