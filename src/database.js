@@ -17,7 +17,7 @@ class Database extends SQLBase {
   async cids () {
     const cids = new Set()
     const recurse = async cid => {
-      let key = cid.toString()
+      const key = cid.toString()
       if (cids.has(key)) return
       cids.add(key)
       const block = await this.get(cid)

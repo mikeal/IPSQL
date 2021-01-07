@@ -52,8 +52,8 @@ class IPSQL {
           data.cids.add(column.index)
         }
       }
+      await data.cids.all()
     }
-    await data.cids.all()
     return data
   }
 

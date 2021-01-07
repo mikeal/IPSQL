@@ -95,7 +95,7 @@ const fromURI = async (uri, put, store) => {
   } else {
     if (!uri.endsWith('.car')) throw new Error('Unknown uri')
     const reader = await CarReader.fromIterable(fs.createReadStream(uri))
-    const [ root ] = await reader.getRoots()
+    const [root] = await reader.getRoots()
     cid = root
     getBlock = async cid => {
       const block = await reader.get(cid)
@@ -104,7 +104,7 @@ const fromURI = async (uri, put, store) => {
       return createBlock(bytes, cid)
     }
     query = async (cid, sql) => {
-      const db = await IPSQL.from(cid, {get: getBlock, put: readOnly, ...mkopts()})
+      const db = await IPSQL.from(cid, { get: getBlock, put: readOnly, ...mkopts() })
       const { result, cids } = await db.read(sql, true)
       return { result, cids: await cids.all() }
     }
@@ -155,7 +155,7 @@ const runExport = async ({ argv, cids, root, getBlock, store }) => {
 }
 
 const runQuery = async argv => {
-  const { query, getBlock, cid, store, close } = await fromURI(argv.uri, readOnly)
+  const { query, getBlock, cid, close } = await fromURI(argv.uri, readOnly)
   const { result, cids } = await query(cid, argv.sql)
 
   let exporter
