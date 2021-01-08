@@ -9,7 +9,7 @@ If you want to store the resulting database you'll need to use the `--export` op
 
 ## ipsql create
 
-To create a new database a SQL statement you can use the `create` command.
+To create a new database from a SQL statement you can use the `create` command.
 
 ```
 $ ipsql create
@@ -40,7 +40,8 @@ To perform mutation operations on an existing database you can use the `write` c
 You can use any supported [storage uri]('./storage-uris') as `input`.
 
 ```
-write <uri> <sql>
+$ ipsql write
+ipsql write <uri> <sql>
 
 Mutate an existing SQL database
 
@@ -63,6 +64,11 @@ bafyreibvkiz44m6wkty2ugeypg33rw2qqzgo5omwvhsnv3t43apzjvhozq
 ```
 
 This exports the entire database, not just the changes, and can now be queried.
+
+```
+$ ipsql query db-with-inserts.car 'SELECT * from People'
+"mikeal","rogers"
+```
 
 You can also export **only** the patch for the mutation you're performing. This will only export the
 blocks that are created by the given mutation.
