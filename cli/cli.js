@@ -202,7 +202,12 @@ const preImport = async (argv, store) => {
 const runImportExport = async (argv) => {
   argv.export = argv.output
   const { db, store } = await preImport(argv, inmem())
-  const cids = await db.cids()
+  let cids
+  if (argv.query) {
+    cids = await db.read(argv.query, true).then(({cids}) => cids.all())
+  } else {
+    cids = await db.cids()
+  }
   await runExport({ argv, cids, root: db.cid, store })
 }
 
@@ -234,6 +239,9 @@ const y = yargs(hideBin(process.argv))
       importOptions(yargs)
       yargs.positional('output', {
         describe: 'File to export to. File extension selects export type'
+      })
+      yargs.option('query', {
+        describe: 'SQL query to export rather than full database'
       })
     }, runImportExport)
     yargs.command('serve <input> [port] [host]', 'Serve the imported database', yargs => {
