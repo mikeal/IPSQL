@@ -85,10 +85,13 @@ const getStore = async argv => {
   let store
   let get
   let put
+  let root
 
   if (argv.store) {
     // TODO: support tcp URLs as a store
     const { reader } = await getReader(argv.store)
+    const [_root] = await reader.getRoots()
+    root = _root
     get = (...args) => reader.get(...args).then(({ bytes, cid }) => createBlock(bytes, cid))
     put = readOnly
     // TODO: when we support S3 and leveldb this will need a put method as well
@@ -156,7 +159,7 @@ const fromURI = async (uri, put, store) => {
   cid = typeof cid === 'string' ? CID.parse(cid) : cid
 
   const database = () => IPSQL.from(cid, { get, put, ...mkopts() })
-  return { cid, close, getBlock, query, database,  }
+  return { cid, close, getBlock, query, database }
 }
 
 const readOnly = block => { throw new Error('Read-only storage mode, cannot write blocks') }
@@ -301,14 +304,13 @@ const runCreate = async argv => {
 
 const runWrite = async argv => {
   const store = argv.store ? await getStore(argv.store) : inmem()
-  const blocks = {}
   const patch = new Set()
   const put = async block => {
     await store.put(block)
     patch.add(block.cid.toString())
     store.put(block)
   }
-  const { database, getBlock } = await fromURI(argv.uri, put, store)
+  const { database } = await fromURI(argv.uri, put, store)
   let db = await database()
   db = await db.write(argv.sql)
 
