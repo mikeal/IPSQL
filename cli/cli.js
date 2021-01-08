@@ -13,6 +13,11 @@ import getPort from 'get-port'
 import publicIP from 'public-ip'
 import repl from './repl.js'
 import { CarReader, CarWriter } from '@ipld/car'
+import bent from 'bent'
+
+const httpGet = bent({ 'user-agent': 'ipsql-v0' })
+const httpGetString = bent('string', { 'user-agent': 'ipsql-v0' })
+const isHttpUrl = str => str.startsWith('http://') || str.startsWith('https://')
 
 const chunker = bf(256)
 
@@ -94,7 +99,13 @@ const fromURI = async (uri, put, store) => {
     close = () => remote.close()
   } else {
     if (!uri.endsWith('.car')) throw new Error('Unknown uri')
-    const reader = await CarReader.fromIterable(fs.createReadStream(uri))
+    let stream
+    if (isHttpUrl(uri)) {
+      stream = await httpGet(uri)
+    } else {
+      stream = fs.createReadStream(uri)
+    }
+    const reader = await CarReader.fromIterable(stream)
     const [root] = await reader.getRoots()
     cid = root
     getBlock = async cid => {
@@ -133,8 +144,13 @@ const runExport = async ({ argv, cids, root, getBlock, store }) => {
   let has = () => false
   if (argv.diff) {
     if (!argv.diff.endsWith('.car')) throw new Error('Can only diff CAR files')
-    const inStream = fs.createReadStream(argv.diff)
-    const { reader } = CarReader.fromIterable(inStream)
+    let stream
+    if (isHttpUrl(argv.diff)) {
+      stream = httpGet(argv.diff)
+    } else {
+      stream = fs.createReadStream(argv.diff)
+    }
+    const { reader } = CarReader.fromIterable(stream)
     has = cid => reader.has(cid)
   }
   const { writer, out } = await CarWriter.create([root])
@@ -193,7 +209,12 @@ const getTableName = argv => argv.tableName || argv.input.slice(argv.input.lastI
 
 const preImport = async (argv, store) => {
   if (!store) store = getStore(argv)
-  const input = fs.readFileSync(argv.input).toString()
+  let input
+  if (isHttpUrl(argv.input)) {
+    input = await httpGetString(argv.input)
+  } else {
+    input = fs.readFileSync(argv.input).toString()
+  }
   const tableName = getTableName(argv)
   const db = await csv({ ...argv, ...mkopts(), ...store, input, tableName })
   return { db, store, input, tableName }

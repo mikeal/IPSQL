@@ -27,6 +27,8 @@ Options:
   --version  Show version number                                       [boolean]
 ```
 
+All import commands accept local files and `http://` and `https://` URLs.
+
 ## Determinism
 
 Importing a CSV into IPSQL will generate a deterministic merkle graph. Importing

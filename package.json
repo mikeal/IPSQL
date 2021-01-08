@@ -49,6 +49,7 @@
   "dependencies": {
     "@ipld/car": "^0.1.2",
     "@ipld/dag-cbor": "^2.0.3",
+    "bent": "^7.3.12",
     "chunky-trees": "^1.0.0",
     "cliffy": "^2.4.2",
     "get-port": "^5.1.1",
