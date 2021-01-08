@@ -204,7 +204,7 @@ const runImportExport = async (argv) => {
   const { db, store } = await preImport(argv, inmem())
   let cids
   if (argv.query) {
-    cids = await db.read(argv.query, true).then(({cids}) => cids.all())
+    cids = await db.read(argv.query, true).then(({ cids }) => cids.all())
   } else {
     cids = await db.cids()
   }
