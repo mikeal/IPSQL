@@ -12,7 +12,32 @@ CSV imports are always written as regular SQL tables (not DAG tables) with colum
 the input data and all columns nullable.
 
 ```
+ipsql import
+
+Import CSV files
+
+Commands:
+  bin.js import export <input> <output>     Export blocks
+  bin.js import serve <input> [port] [host  Serve the imported database
+  ]
+  bin.js import repl <input>                Start REPL for imported db
+
+Options:
+  --help     Show help                                                 [boolean]
+  --version  Show version number                                       [boolean]
 ```
+
+## Determinism
+
+Importing a CSV into IPSQL will generate a deterministic merkle graph. Importing
+the same CSV file on two machines is guaranteed to produce the same database.
+
+If modification are made to the CSV file the graph generated will de-duplicate
+parts of the graph with the prior import. This means that whether a database
+is mutated with SQL or simply re-imported as a CSV file, the hash of the database
+is the same and only the difference between the databases will need to be replicated.
+
+This makes database diffing, replication, and offline behavior similar to `git`.
 
 ## Import and Serve
 
