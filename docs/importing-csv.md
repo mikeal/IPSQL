@@ -32,8 +32,9 @@ Options:
 Importing a CSV into IPSQL will generate a deterministic merkle graph. Importing
 the same CSV file on two machines is guaranteed to produce the same database.
 
-If modification are made to the CSV file the graph generated will de-duplicate
-parts of the graph with the prior import. This means that whether a database
+If modifications are made to the CSV file and it is imported again the newly generated
+graph will de-duplicate unmodified database against the prior import even though the importer has
+no knowledge of the prior database state it's being compared against. This means that whether a database
 is mutated with SQL or simply re-imported as a CSV file, the hash of the database
 is the same and only the difference between the databases will need to be replicated.
 
