@@ -6,6 +6,29 @@ and query language.
 This project is pre-alpha and under heavy active development. Do not use in production, breaking
 changes will land without notice.
 
+# CLI
+
+The primary way to interact with IPSQL right now is via the command line. You can install it with
+`npm` or use `npx` to run it without installing locally.
+
+```
+$ ipsql help
+ipsql [command]
+
+Commands:
+  bin.js query <uri> <sql>  Run IPSQL query
+  bin.js repl <uri>         Run local REPL
+  bin.js import             Import CSV files
+
+Options:
+  --help     Show help                                                 [boolean]
+  --version  Show version number                                       [boolean]
+```
+
+The JS API is currently considered internal until the churn in the code base dies down.
+
+* [Importing CSV files](./doc/import-csv.md)
+
 # SQL Feature Checklist
 
 - CREATE
@@ -58,7 +81,7 @@ changes will land without notice.
     - [ ] NOT
     - [ ] IS NOT NULL, IS NULL
   - [ ] JOIN
-  - [ ] ORDER BY
+  - [x] ORDER BY
   - [ ] GROUP BY
   - [ ] HAVING
   - [ ] UNION
