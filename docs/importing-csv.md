@@ -104,6 +104,8 @@ ipsql import repl empires.csv output.car
 The extension of the output file determines what the export format is. Right now, only `.car` is
 supported, but eventually other block stores and archive formats will be added.
 
+`.car` files can be imported into IPFS for distribution and can also be stored in Filecoin.
+
 You can now run queries against this file directly with the `query` command.
 
 ```
