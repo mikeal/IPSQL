@@ -27,7 +27,9 @@ Options:
 
 The JS API is currently considered internal until the churn in the code base dies down.
 
-* [Importing CSV files](./doc/import-csv.md)
+* CLI
+  * [Importing CSV files](./doc/import-csv.md)
+  * [CREATE and INSERT](./doc/create-and-insert.md)
 
 # SQL Feature Checklist
 
