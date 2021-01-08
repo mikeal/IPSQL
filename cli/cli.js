@@ -297,9 +297,8 @@ const runCreate = async argv => {
     */
     const cids = await db.cids()
     await runExport({ argv, cids, root: db.cid, store })
-  } else {
-    console.log(db.cid.toString())
   }
+  console.log(db.cid.toString())
 }
 
 const runWrite = async argv => {
