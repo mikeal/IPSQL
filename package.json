@@ -39,6 +39,9 @@
     },
     "./csv": {
       "import": "./src/csv.js"
+    },
+    "./database": {
+      "import": "./src/database.js"
     }
   },
   "devDependencies": {

@@ -44,12 +44,15 @@ class IPSQL {
     const result = this.db.sql(q)
     const data = await result.all(full)
     if (full) {
+      /* This should eventually be factored out to reduce export
+       * size https://github.com/mikeal/IPSQL/issues/2
+       */
       for (const table of Object.values(this.db.tables)) {
         data.cids.add(table)
-        data.cids.add(table.rows)
+        if (table.rows) data.cids.add(table.rows)
         for (const column of table.columns) {
           data.cids.add(column)
-          data.cids.add(column.index)
+          if (column.index) data.cids.add(column.index)
         }
       }
       await data.cids.all()
