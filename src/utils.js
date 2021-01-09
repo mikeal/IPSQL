@@ -1,14 +1,22 @@
 import { sha256 as hasher } from 'multiformats/hashes/sha2'
 import * as codec from '@ipld/dag-cbor'
+import * as ecodec from 'encrypted-block'
+import raw from 'multiformats/codecs/raw'
 import { encode as encoder, decode as decoder, create } from 'multiformats/block'
 
 const mf = { codec, hasher }
 
+const codecs = {}
+codecs[codec.code] = codec
+codecs[ecodec.code] = ecodec
+codecs[raw.code] = raw
+
 const encode = value => encoder({ value, ...mf })
 const decode = bytes => decoder({ bytes, ...mf })
 const createBlock = (bytes, cid) => {
-  if (cid.code !== 113) throw new Error('Unsupported')
-  return create({ bytes, cid, ...mf })
+  const codec = codecs[cid.code]
+  if (!codec) throw new Error('Unsupported Codec')
+  return create({ bytes, cid, hasher, codec })
 }
 
 const immediate = () => new Promise(resolve => setImmediate(resolve))
