@@ -270,7 +270,7 @@ const runQuery = async argv => {
 const runRepl = async argv => {
   // TODO: run repl with --store option for connecting with local storage
   const store = inmem()
-  const { remote, cid } = await fromURI(argv.uri, readOnly, store)
+  const { remote, cid } = await fromURI(argv.uri, readOnly, store, argv.decrypt)
   const cli = repl({ remote, cid, store })
   cli.show()
 }
@@ -353,7 +353,7 @@ const runWrite = async argv => {
     patch.add(block.cid.toString())
     store.put(block)
   }
-  const { database } = await fromURI(argv.uri, put, store)
+  const { database } = await fromURI(argv.uri, put, store, argv.decrypt)
   let db = await database()
   db = await db.write(argv.sql)
 
@@ -379,6 +379,8 @@ const exportOptions = yargs => {
   yargs.option('query', {
     describe: 'SQL query to export rather than full database'
   })
+  yargs.option('encrypt', { describe: 'Encrypt the exported graph with the given keyfile' })
+  yargs.option('decrypt', { describe: 'Decrypt the target graph before running the query' })
 }
 
 const keygenOptions = yargs => {
