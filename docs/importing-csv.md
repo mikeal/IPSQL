@@ -195,3 +195,40 @@ ipsql query egypt-empires.car 'SELECT empire from `empires.csv` WHERE country_na
 "Nabataean Kingdom "
 ```
 
+### Encryption
+
+You can encrypt any export using IPSQL's [builtin encryption](./encryption.md).
+
+```
+ipsql import export empires.csv egypt-empires.car --query='SELECT empire from `empires.csv` WHERE country_name = "Egypt"' --encrypt=test.key
+```
+
+This produces a `.car` file that is less than 10% the size of the full database but can still satisfy
+the given query.
+
+```
+ipsql query egypt-empires.car 'SELECT empire from `empires.csv` WHERE country_name = "Egypt"' --decrypt=test.key
+"Achaemenid Empire"
+"Ayyubid Dynasty"
+"British Empire"
+"Byzantine Empire"
+"Egyptian Empire"
+"Fatimid Caliphate"
+"Great Seljuq Empire"
+"Macedonian Empire"
+"Mamluk Sultanate"
+"NeoAssyrian Empire"
+"NeoBabylonian Empire"
+"Ottoman Empire"
+"Palmyrene Empire"
+"Ptolemaic Empire"
+"Rashidun Caliphate"
+"Roman Empire"
+"Sassanid Dynasty"
+"Umayyad Caliphate"
+"Kingdom of Kush "
+"Abbasid Empire"
+"Nabataean Kingdom "
+```
+
+

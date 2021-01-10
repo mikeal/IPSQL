@@ -213,7 +213,6 @@ const runExport = async ({ argv, cids, root, getBlock, store }) => {
     const blocks = []
     const opts = { key, root, cids, get: get || getBlock, ...mkopts() }
     let last
-    console.log(opts)
     for await (const block of encrypt(opts)) {
       blocks.push(block)
       last = block
@@ -222,7 +221,7 @@ const runExport = async ({ argv, cids, root, getBlock, store }) => {
     Readable.from(out).pipe(createWriteStream(argv.export))
     await Promise.all(blocks.map(block => writer.put(block)))
     writer.close()
-    return
+    return last.cid
   }
 
   const { writer, out } = await CarWriter.create([root])
@@ -238,6 +237,7 @@ const runExport = async ({ argv, cids, root, getBlock, store }) => {
   }
   await Promise.all(promises)
   await writer.close()
+  return root
 }
 
 const runQuery = async argv => {
@@ -299,7 +299,7 @@ const runImportExport = async (argv) => {
   } else {
     cids = await db.cids()
   }
-  await runExport({ argv, cids, root: db.cid, store })
+  return await runExport({ argv, cids, root: db.cid, store })
 }
 
 const runImportRepl = async (argv) => {
@@ -333,6 +333,7 @@ const runCreate = async argv => {
   }
   const opts = { get: store.get, put: readOnly, ...mkopts() }
   db = await IPSQL.from(last.cid, opts)
+  let root
   if (argv.export) {
     /* Note that we can't just use the list of blocks that were emitted because
     *  in the future when we support sequential queries (CREATE followed by subsequent
@@ -340,9 +341,10 @@ const runCreate = async argv => {
     *  the final database for all the cids in its graph
     */
     const cids = await db.cids()
-    await runExport({ argv, cids, root: db.cid, store })
+    root = await runExport({ argv, cids, root: db.cid, store })
   }
-  console.log(db.cid.toString())
+  if (!root) console.log(db.cid.toString())
+  else console.log(root.toString())
 }
 
 const runWrite = async argv => {
@@ -357,9 +359,10 @@ const runWrite = async argv => {
   let db = await database()
   db = await db.write(argv.sql)
 
+  let root
   if (argv.patch) {
     if (!argv.export) throw new Error('Must supply export argument w/ patch option')
-    await runExport({ argv, cids: patch, root: db.cid, store })
+    root = await runExport({ argv, cids: patch, root: db.cid, store })
   } else if (argv.export) {
     /* Note that we can't just use the list of blocks that were emitted because
     *  in the future when we support sequential queries (CREATE followed by subsequent
@@ -367,9 +370,10 @@ const runWrite = async argv => {
     *  the final database for all the cids in its graph
     */
     const cids = await db.cids()
-    await runExport({ argv, cids, root: db.cid, store })
+    root = await runExport({ argv, cids, root: db.cid, store })
   }
-  console.log(db.cid.toString())
+  if (!root) console.log(db.cid.toString())
+  else console.log(root.toString())
 }
 
 const exportOptions = yargs => {

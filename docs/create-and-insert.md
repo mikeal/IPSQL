@@ -77,3 +77,37 @@ blocks that are created by the given mutation.
 $ ipsql write database.car 'INSERT INTO People VALUES ("mikeal", "rogers")' --export=patch.car --patch
 bafyreibvkiz44m6wkty2ugeypg33rw2qqzgo5omwvhsnv3t43apzjvhozq
 ```
+
+### Encryption
+
+All commands for mutation support encryption. Please read the full documentation on
+[IPSQL encryption](./encryption.md) to understand how it works and what the limitations
+are.
+
+When working with a source database that is encrypted
+you must pass the `--decrypt` option with the decryption key. When exporting a database you want
+to encrypt you must pass the `--encrypt` option with the encryption key.
+
+Let's create an encrypted database.
+
+```
+$ ipsql create 'CREATE TABLE People (first VARCHAR(255), last VARCHAR(255))' --export=new.car --encrypt=test.key
+bafyreigvryux2i4rxgcd6lvmhlcjcrsxwwaqb73ngnne5luo2sepeucf2u
+```
+
+Now let's write a new row into the database, decrypting the existing database and encrypting the database
+after our insertion.
+
+```
+$ ipsql write new.car 'INSERT INTO People VALUES ("mikeal", "rogers")' --export=db-with-inserts.car --encrypt=test.key --decrypt=test.key
+bafyreieo3vpsoi533qqday4kb34k2k7quoxkumgcgbdyqym2afb2gqg5li
+```
+
+This exports the entire database, not just the changes, and can now be queried.
+
+```
+$ ipsql query db-with-inserts.car 'SELECT * from People' --decrypt=test.key
+"mikeal","rogers"
+```
+
+

@@ -16,9 +16,12 @@ $ ipsql help
 ipsql [command]
 
 Commands:
-  bin.js query <uri> <sql>  Run IPSQL query
-  bin.js repl <uri>         Run local REPL
-  bin.js import             Import CSV files
+  ipsql query <uri> <sql>    Run IPSQL query
+  ipsql repl <uri>           Run local REPL
+  ipsql create <sql>         Create a new database
+  ipsql write <uri> <sql>    Mutate an existing SQL database
+  ipsql import <subcommand>  Import CSV files
+  ipsql keygen <subcommand>  Generate keys for encryption
 
 Options:
   --help     Show help                                                 [boolean]
@@ -30,6 +33,7 @@ The JS API is currently considered internal until the churn in the code base die
 * CLI
   * [Importing CSV files](./doc/import-csv.md)
   * [CREATE and INSERT](./doc/create-and-insert.md)
+  * [Encrypting and Decrypting databases](./doc/encryption.md)
 
 # SQL Feature Checklist
 
