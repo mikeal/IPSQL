@@ -103,7 +103,7 @@ $ ipsql write new.car 'INSERT INTO People VALUES ("mikeal", "rogers")' --export=
 bafyreieo3vpsoi533qqday4kb34k2k7quoxkumgcgbdyqym2afb2gqg5li
 ```
 
-This exports the entire database, not just the changes, and can now be queried.
+We can still query encrypted databases normally, we just need to pass the `--decrypt` option.
 
 ```
 $ ipsql query db-with-inserts.car 'SELECT * from People' --decrypt=test.key
