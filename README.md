@@ -31,7 +31,7 @@ Options:
 The JS API is currently considered internal until the churn in the code base dies down.
 
 * CLI
-  * [Importing CSV files](./docs/import-csv.md)
+  * [Importing CSV files](./docs/importing-csv.md)
   * [CREATE and INSERT](./docs/create-and-insert.md)
   * [Encrypting and Decrypting databases](./docs/encryption.md)
 
