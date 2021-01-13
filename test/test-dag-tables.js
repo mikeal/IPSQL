@@ -53,4 +53,61 @@ describe('dag tables', () => {
     const column = table.table.columns[0]
     same(column.index, null)
   })
+
+  it('insert twice (no index match)', async () => {
+    let table = await create('test', 'firstname VARCHAR(255)')
+
+    const hello = { hello: 'world' }
+    table = await table.insert(hello)
+    let ret = await table.get(1)
+    same(ret, hello)
+    same(table.table.name, 'test')
+
+    let column = table.table.columns[0]
+    same(column.index, null)
+
+    table = await table.insert(hello)
+    ret = await table.get(1)
+    same(ret, hello)
+    ret = await table.get(2)
+    same(ret, hello)
+    same(table.table.name, 'test')
+
+    column = table.table.columns[0]
+    same(column.index, null)
+  })
+
+  it('insert (index match)', async () => {
+    let table = await create('test', 'firstname VARCHAR(255)')
+
+    const hello = { firstname: 'hello', lastname: 'world' }
+    table = await table.insert(hello)
+    const ret = await table.get(1)
+    same(ret, hello)
+    same(table.table.name, 'test')
+
+    const results = await table.ipsql.read('SELECT firstname FROM test WHERE firstname = "hello"')
+    same(results, [['hello']])
+  })
+
+  it('insert twice (index match)', async () => {
+    let table = await create('test', 'firstname VARCHAR(255)')
+
+    let hello = { firstname: 'hello', lastname: 'world' }
+    table = await table.insert(hello)
+    const ret = await table.get(1)
+    same(ret, hello)
+    same(table.table.name, 'test')
+
+    let results = await table.ipsql.read('SELECT firstname FROM test WHERE firstname = "hello"')
+    same(results, [['hello']])
+
+    hello = { firstname: 'world', lastname: 'hello' }
+    table = await table.insert(hello)
+
+    results = await table.ipsql.read('SELECT firstname FROM test WHERE firstname = "hello"')
+    same(results, [['hello']])
+    results = await table.ipsql.read('SELECT firstname FROM test WHERE firstname = "world"')
+    same(results, [['world']])
+  })
 })
