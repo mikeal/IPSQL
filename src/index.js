@@ -2,6 +2,7 @@ import { CID } from 'multiformats'
 import { Database } from './database.js'
 import { nocache } from 'chunky-trees/cache'
 import { bf } from 'chunky-trees/utils'
+import { DAGAPI } from './dag.js'
 
 const immutable = (obj, props) => {
   for (const [key, value] of Object.entries(props)) {
@@ -14,8 +15,13 @@ const defaults = { cache: nocache, chunker: bf(256) }
 class IPSQL {
   constructor ({ cid, get, put, db }) {
     if (!get || !put || !db) throw new Error('Missing required argument')
-    const props = { cid, db, getBlock: get, putBlock: put }
+    const dt = new DAGAPI(this)
+    const props = { cid, db, getBlock: get, putBlock: put, dt }
     immutable(this, props)
+  }
+
+  get IPSQL () {
+    return IPSQL
   }
 
   cids () {
@@ -27,7 +33,15 @@ class IPSQL {
   }
 
   async write (q) {
-    const iter = this.db.sql(q, { chunker: this.db.chunker })
+    let iter
+    if (typeof q === 'object') {
+      if (q.dt) iter = this.dt.write(q.dt)
+      else {
+        throw new Error('Don\'t understand query')
+      }
+    } else {
+      iter = this.db.sql(q, { chunker: this.db.chunker })
+    }
 
     let last
     for await (const block of iter) {
@@ -35,9 +49,8 @@ class IPSQL {
       last = block
     }
     const { getBlock: get, putBlock: put } = this
-    const opts = { get, cache: this.db.cache, chunker: this.db.chunker }
-    const db = await Database.from(last.cid, opts)
-    return new IPSQL({ get, put, db, cid: last.cid })
+    const opts = { get, put, cache: this.db.cache, chunker: this.db.chunker }
+    return IPSQL.from(last.cid, opts)
   }
 
   async read (q, full) {
@@ -60,7 +73,7 @@ class IPSQL {
     return data
   }
 
-  static create (q, opts) {
+  static create (q, opts = {}) {
     opts.cache = opts.cache || defaults.cache
     opts.chunker = opts.chunker || defaults.chunker
     const db = new IPSQL({ ...opts, db: Database.create(opts) })

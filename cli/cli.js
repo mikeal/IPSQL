@@ -151,7 +151,7 @@ const fromURI = async (uri, put, store, key) => {
       if (!store) store = inmem()
       const _get = cid => reader.get(cid).then(({ bytes }) => createBlock(bytes, cid))
       let last
-      for await (const block of decrypt({ root, get: _get, ...mkopts(), key})) {
+      for await (const block of decrypt({ root, get: _get, ...mkopts(), key })) {
         await store.put(block)
         last = block
       }

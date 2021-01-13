@@ -11,7 +11,7 @@ const encrypt = async function * ({ get, cids, hasher, key, cache, chunker, root
   for (const string of cids) {
     const cid = CID.parse(string)
     const unencrypted = await get(cid)
-    const block = await encode({...await codec.encrypt({...unencrypted, key}), codec, hasher})
+    const block = await encode({ ...await codec.encrypt({ ...unencrypted, key }), codec, hasher })
     yield block
     set.add(block.cid.toString())
     if (unencrypted.cid.equals(root)) eroot = block.cid
@@ -19,24 +19,24 @@ const encrypt = async function * ({ get, cids, hasher, key, cache, chunker, root
   if (!eroot) throw new Error('cids does not include root')
   const list = [...set].map(s => CID.parse(s))
   let last
-  for await (const node of create({ list, get, hasher, cache, chunker, hasher, codec: dagcbor })) {
+  for await (const node of create({ list, get, cache, chunker, hasher, codec: dagcbor })) {
     const block = await node.block
     yield block
     last = block
   }
-  const head = [ eroot, last.cid ]
+  const head = [eroot, last.cid]
   const block = await encode({ value: head, codec: dagcbor, hasher })
   yield block
 }
 
 const decrypt = async function * ({ root, get, key, cache, chunker, hasher }) {
   const o = { ...await get(root), codec: dagcbor, hasher }
-  const { value: [ eroot, tree ] } = await decode(o)
+  const { value: [eroot, tree] } = await decode(o)
   const rootBlock = await get(eroot)
   const cidset = await load({ cid: tree, get, cache, chunker, codec, hasher })
   const { result: nodes } = await cidset.getAllEntries()
   const unwrap = async (eblock) => {
-    const { bytes, cid } = await codec.decrypt({...eblock, key})
+    const { bytes, cid } = await codec.decrypt({ ...eblock, key })
     const block = await createBlock(bytes, cid)
     return block
   }

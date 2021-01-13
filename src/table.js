@@ -5,6 +5,8 @@ import { encode, mf, SQLBase, getNode } from './utils.js'
 
 const pluck = node => node.result
 
+const registry = {}
+
 class Column extends SQLBase {
   constructor ({ schema, index, ...opts }) {
     super(opts)
@@ -70,6 +72,10 @@ class Row {
     this.table = table
   }
 
+  get isRow () {
+    return true
+  }
+
   get props () {
     return this.table.columns.map(col => col.schema)
   }
@@ -92,7 +98,7 @@ class Row {
       obj = this.allColumnNames().map(name => obj[name])
       block = await encode(obj)
     }
-    return new Row({ block, table: this.table })
+    return this.table.createRow({ block })
   }
 
   async rdiff (cid, get, cache) {
@@ -103,7 +109,7 @@ class Row {
     } else {
       block = await get(cid)
     }
-    const row = new Row({ block, table: this.table })
+    const row = this.table.createRow({ block })
     const changes = {}
     for (const name of this.allColumnNames()) {
       const [a, b] = [this.get(name), row.get(name)]
@@ -233,90 +239,13 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
       }
       const block = await encode(row)
       yield block
-      const _row = new Row({ block, table })
+      const _row = table.createRow({ block })
       inserts.push({ block, row: _row })
     }
   }
   const opts = { chunker, get, cache, ...mf }
 
-  let rows
-  let list
-  let writeIndex
-  let blocks = []
-  if (table.rows !== null) {
-    let i = await table.rows.getLength()
-    list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
-    const { blocks: __blocks, root, previous } = await table.rows.bulk(list)
-    rows = root
-    yield * __blocks
-    const prev = new Map(previous.map(({ key, value }) => [key, value]))
-    list = await Promise.all(list.map(async ({ key, row, value }) => {
-      let changes
-      if (prev.get(key)) {
-        changes = await row.rdiff(prev.get(key), get, cache)
-      }
-      return { key, row, value, changes }
-    }))
-    writeIndex = async (column, i) => {
-      const entries = []
-      for (const { key, row, changes } of list) {
-        if (changes && typeof changes[column.name] !== 'undefined') {
-          entries.push({ key: [changes[column.name], key], del: true })
-        }
-        const val = row.getIndex(i)
-        entries.push({ key: [val, key], row, value: row.block.cid })
-      }
-      const { blocks: _blocks, root } = await column.index.bulk(entries)
-      _blocks.forEach(b => blocks.push(b))
-      return root
-    }
-  } else {
-    let i = 1
-    list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
-
-    for await (const node of createSparseArray({ list, ...opts })) {
-      yield node.block
-      rows = node
-    }
-    writeIndex = async (column, i) => {
-      const entries = []
-      for (const { key, row } of list) {
-        const val = row.getIndex(i)
-        entries.push({ key: [val, key], row, value: row.block.cid })
-      }
-      let index
-      for await (const node of createDBIndex({ list: entries, ...opts })) {
-        blocks.push(node.block)
-        index = node
-      }
-      return index
-    }
-  }
-  const promises = table.columns.map((...args) => writeIndex(...args))
-  const pending = new Set(promises)
-  promises.forEach(p => p.then(() => pending.delete(p)))
-  while (pending.size) {
-    await Promise.race([...pending])
-    yield * blocks
-    blocks = []
-  }
-  const indexes = await Promise.all(promises.map(p => p.then(index => index.address)))
-  const node = await table.encodeNode()
-  node.rows = await rows.address
-  node.columns = []
-  const columns = await Promise.all(table.columns.map(c => c.encodeNode()))
-  while (columns.length) {
-    const col = columns.shift()
-    col.index = await indexes.shift()
-    const block = await encode(col)
-    yield block
-    node.columns.push(block.cid)
-  }
-  const newTable = await encode(node)
-  yield newTable
-  const dbNode = await database.encodeNode()
-  dbNode.tables[table.name] = newTable.cid
-  yield encode(dbNode)
+  yield * table._insert({ opts, table, inserts, get, cache, database })
 }
 
 const rangeOperators = new Set(['<', '>', '<=', '>='])
@@ -443,23 +372,144 @@ class Table extends SQLBase {
     this.columns = columns
   }
 
+  async get (i, get) {
+    if (typeof i !== 'number') throw new Error('ROWID must be integer')
+    if (!this.rows) throw new Error('No rows in this table')
+    const { result: { value }, cids } = await this.rows.getEntry(i)
+    const block = await get(value)
+    const result = this.createRow({ block, table: this })
+    return { result, cids }
+  }
+
+  createRow (opts) {
+    return new Row({ ...opts, table: this })
+  }
+
+  get tableType () {
+    return 'table'
+  }
+
   getColumn (columnName) {
     return this.columns.find(c => c.name === columnName)
   }
 
   async getRow (cid, get, cache) {
-    const create = block => new Row({ block, table: this })
+    const create = block => this.createRow({ block })
     return getNode(cid, get, cache, create)
   }
 
   async encodeNode () {
     const columns = await Promise.all(this.columns.map(column => column.address))
     const rows = this.rows === null ? null : await this.rows.address
-    return { columns, rows }
+    const type = this.tableType
+    return { columns, rows, type }
   }
 
   insert (ast, opts) {
     return tableInsert(this, ast, opts)
+  }
+
+  async * _insert ({ opts, table, inserts, get, cache, database }) {
+    let rows
+    let list
+    let writeIndex
+    let blocks = []
+    if (table.rows !== null) {
+      let i = await table.rows.getLength()
+      list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
+      const { blocks: __blocks, root, previous } = await table.rows.bulk(list)
+      rows = root
+      yield * __blocks
+      const prev = new Map(previous.map(({ key, value }) => [key, value]))
+      list = await Promise.all(list.map(async ({ key, row, value }) => {
+        let changes
+        if (prev.get(key)) {
+          changes = await row.rdiff(prev.get(key), get, cache)
+        }
+        return { key, row, value, changes }
+      }))
+      writeIndex = async (column, i) => {
+        const entries = []
+        for (const { key, row, changes } of list) {
+          if (changes && typeof changes[column.name] !== 'undefined') {
+            entries.push({ key: [changes[column.name], key], del: true })
+          }
+          const val = row.getIndex(i)
+          if (typeof val !== 'undefined') {
+            entries.push({ key: [val, key], row, value: row.block.cid })
+          }
+        }
+        if (!entries.length) return column.index ? column.index : null
+        if (!column.index) {
+          let index = null
+          for await (const node of createDBIndex({ list: entries, ...opts })) {
+            blocks.push(node.block)
+            index = node
+          }
+          return index
+        } else {
+          const { blocks: _blocks, root } = await column.index.bulk(entries)
+          _blocks.forEach(b => blocks.push(b))
+          return root
+        }
+      }
+    } else {
+      let i = 1
+      list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
+
+      for await (const node of createSparseArray({ list, ...opts })) {
+        yield node.block
+        rows = node
+      }
+      writeIndex = async (column, i) => {
+        const entries = []
+        for (const { key, row } of list) {
+          const val = row.getIndex(i)
+          if (typeof val !== 'undefined') {
+            entries.push({ key: [val, key], row, value: row.block.cid })
+          }
+        }
+        if (!entries.length) return column.index ? column.index : null
+        let index = null
+        for await (const node of createDBIndex({ list: entries, ...opts })) {
+          blocks.push(node.block)
+          index = node
+        }
+        return index
+      }
+    }
+
+    const promises = table.columns.map((...args) => writeIndex(...args))
+    const pending = new Set(promises)
+    promises.forEach(p => p.then(() => pending.delete(p)))
+    while (pending.size) {
+      await Promise.race([...pending])
+      yield * blocks
+      blocks = []
+    }
+    const indexes = await Promise.all(promises.map(p => p.then(index => {
+      if (index === null) return null
+      if (index.address) return index.address
+      throw new Error('here')
+    })))
+    const node = await table.encodeNode()
+    node.rows = await rows.address
+    node.columns = []
+    const columns = await Promise.all(table.columns.map(c => c.encodeNode()))
+    while (columns.length) {
+      const col = columns.shift()
+      col.index = await indexes.shift()
+      if (typeof col.index === 'undefined') throw new Error('here')
+      const block = await encode(col)
+      yield block
+      node.columns.push(block.cid)
+    }
+    const newTable = await encode(node)
+    yield newTable
+    const dbNode = await database.encodeNode()
+    dbNode.tables = { ...dbNode.tables }
+    dbNode.tables[table.name] = newTable.cid
+    yield encode(dbNode)
   }
 
   static create (columnSchemas) {
@@ -470,18 +520,22 @@ class Table extends SQLBase {
 
   static from (cid, name, { get, cache, chunker }) {
     const create = async (block) => {
-      let { columns, rows } = block.value
+      let { columns, rows, type } = block.value
       const promises = columns.map(cid => Column.from(cid, { get, cache, chunker }))
       if (rows !== null) {
         rows = loadSparseArray({ cid: rows, cache, get, chunker, ...mf })
       }
       columns = await Promise.all(promises)
       rows = await rows
-      return new Table({ name, columns, rows, get, cache, block })
+      const CLS = registry[type]
+      if (!CLS) throw new Error('Unknown table type')
+      return new CLS({ name, columns, rows, get, cache, block })
     }
     return getNode(cid, get, cache, create)
   }
 }
+
+registry.table = Table
 
 const createTable = async function * (database, ast) {
   const [{ table: name }] = ast.table
@@ -497,4 +551,4 @@ const createTable = async function * (database, ast) {
   yield encode(node)
 }
 
-export { Table, Column, Row, Where, createTable }
+export { Table, Column, Row, Where, createTable, registry }

@@ -1,7 +1,7 @@
 import sql from 'node-sql-parser'
 import { SQLBase, getNode } from './utils.js'
 import { CIDCounter } from 'chunky-trees/utils'
-import { createTable, Table, Where, Row } from './table.js'
+import { createTable, Table, Where } from './table.js'
 
 const { entries, fromEntries } = Object
 
@@ -120,7 +120,7 @@ class Select {
   async columns (entry, table) {
     const { value } = entry
     const { get, cache } = this.db
-    const create = block => new Row({ block, table })
+    const create = block => table.createRow({ block })
     const row = await getNode(value, get, cache, create)
     return { row, columns: row.columns(this.ast.columns) }
   }
