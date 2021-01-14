@@ -54,7 +54,7 @@ because the USGS data endpoint puts the relevant rows in "features" property.
 
 You can read more about [DAG Tables](./dag-tables.md) to understand how column indexes work.
 
-The following examples will use `--columns=``properties/net`` VARCHAR(256)'`.
+The following examples will use ``--columns=`properties/net` VARCHAR(256)'``.
 
 ## Import and Serve
 
