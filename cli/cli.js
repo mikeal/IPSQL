@@ -3,6 +3,7 @@ import { createBlock } from 'ipsql/utils'
 import cache from 'ipsql/cache'
 import network from 'ipsql/network'
 import csv from 'ipsql/csv'
+import jsonImport from 'ipsql/json-import'
 import { Database } from 'ipsql/database'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
@@ -45,7 +46,10 @@ const importOptions = yargs => {
     describe: 'Optional Table Name. One will be generated from the import file if not set'
   })
   yargs.positional('input', {
-    describe: 'CSV input file'
+    describe: 'CSV or JSON input file'
+  })
+  yargs.option('traverse', {
+    describe: 'A path to traverse through in the JSON object to import'
   })
 }
 
@@ -286,7 +290,14 @@ const preImport = async (argv, store) => {
     input = readFileSync(argv.input).toString()
   }
   const tableName = getTableName(argv)
-  const db = await csv({ ...argv, ...mkopts(), ...store, input, tableName })
+  let db
+  if (argv.input.endsWith('.csv')) {
+    db = await csv({ ...argv, ...mkopts(), ...store, input, tableName })
+  } else if (argv.input.endsWith('.json') || argv.input.endsWith('.geojson')) {
+    db = await jsonImport({ ...argv, ...mkopts(), ...store, input, tableName })
+  } else {
+    throw new Error('Unknown input file type. Not .csv, .json or .geojson')
+  }
   return { db, store, input, tableName }
 }
 
@@ -412,7 +423,7 @@ const y = yargs(hideBin(process.argv))
       default: false
     })
   }, runWrite)
-  .command('import <subcommand>', 'Import CSV files', yargs => {
+  .command('import <subcommand>', 'Import CSV and JSON files', yargs => {
     yargs.command('export <input> <output>', 'Export blocks', yargs => {
       importOptions(yargs)
       exportOptions(yargs)
