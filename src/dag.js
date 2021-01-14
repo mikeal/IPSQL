@@ -54,35 +54,22 @@ class DAGRow extends Row {
 
 registry.dag = DAGTable
 
-class DAGTableAPI {
-  constructor ({ table, ipsql }) {
-    this.table = table
-    this.ipsql = ipsql
-  }
-
-  async get (i, full) {
-    const { result, cids } = await this.table.get(i, this.ipsql.getBlock)
-    if (full) return { result, cids }
-    return result.block.value
-  }
-
-  async insert (inserts) {
-    if (!Array.isArray(inserts)) inserts = [inserts]
-    const { name } = this.table
-    const ipsql = await this.ipsql.write({ dt: { insert: { name, inserts } } })
-    return ipsql.dt.get(this.table.name)
-  }
-}
-
 class DAGAPI {
   constructor (ipsql) {
     this.ipsql = ipsql
   }
 
-  async get (tableName) {
-    const table = this.ipsql.db.tables[tableName]
-    if (!table) throw new Error(`No table named ${tableName}`)
-    return new DAGTableAPI({ table, ipsql: this.ipsql })
+  async get (name, i, full) {
+    const table = this.ipsql.db.tables[name]
+    if (!table) throw new Error(`No table named ${name}`)
+    const { result, cids } = await table.get(i, this.ipsql.getBlock)
+    if (full) return { result, cids }
+    return result.block.value
+  }
+
+  insert (name, inserts) {
+    if (!Array.isArray(inserts)) inserts = [inserts]
+    return this.ipsql.write({ dt: { insert: { name, inserts } } })
   }
 
   async * write ({ create, insert }) {
@@ -90,8 +77,11 @@ class DAGAPI {
     const { chunker, cache } = db
     if (create) {
       const { name, columns: columnString } = create
-      const ast = parse(`CREATE TABLE STUB (${columnString})`)
+      const rand = Math.random().toString()
+      const sql = `CREATE TABLE STUB ( \`${rand}\` VARCHAR(255)${columnString ? ', ' + columnString : ' '})`
+      const ast = parse(sql)
       const columns = []
+      ast.create_definitions.shift()
       for (const schema of ast.create_definitions) {
         const column = Column.create(schema)
         yield column.encode()

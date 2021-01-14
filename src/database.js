@@ -88,8 +88,17 @@ const runSelect = async function * (select, cids) {
   }
 }
 
+const { keys } = Object
+const { stringify } = JSON
+
 const runWhere = async function * (select, cids) {
-  const tables = select.ast.from.map(({ table }) => select.db.tables[table])
+  const tables = select.ast.from.map(({ table }) => {
+    const _table = select.db.tables[table]
+    if (!_table) {
+      throw new Error(`No table named ${ table }. Only ${ stringify(keys(select.db.tables)) }`)
+    }
+    return _table
+  })
   cids.add(select.db)
   tables.forEach(t => cids.add(t))
   if (select.ast.where === null) {

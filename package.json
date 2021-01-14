@@ -42,6 +42,9 @@
     },
     "./database": {
       "import": "./src/database.js"
+    },
+    "./json-import": {
+      "import": "./src/json-import.js"
     }
   },
   "devDependencies": {
