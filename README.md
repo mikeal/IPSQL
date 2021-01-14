@@ -30,8 +30,17 @@ Options:
 
 The JS API is currently considered internal until the churn in the code base dies down.
 
+* Features
+  * Traditional SQL [CREATE, UPDATE, SELECT, WHERE, etc](#sql-feature-checklist).
+  * Deltas and proofs for every database operation and query.
+    * You can replicate the data for only a single query as hash linked blocks.
+    * Every mutation creates deltas to prior states and even query deltas can
+      be replicated.
+  * Optional Encryption
+  * [DAG Tables](./doc/dag-tables.md) (JSON-like unstructured objects as rows, with column indexing an SQL queries still available)
 * CLI
-  * [Importing CSV files](./doc/import-csv.md)
+  * [Importing CSV files](./doc/importing-csv.md)
+  * [Importing JSON files (into DAG tables)](./doc/importing-json.md)
   * [CREATE and INSERT](./doc/create-and-insert.md)
   * [Encrypting and Decrypting databases](./doc/encryption.md)
 
