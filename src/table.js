@@ -10,7 +10,11 @@ const registry = {}
 class Column extends SQLBase {
   constructor ({ schema, index, ...opts }) {
     super(opts)
-    this.name = schema.column.column
+    const name = schema.column.column
+    if (name.startsWith('/') || name.endsWith('/')) {
+      throw new Error("Column name must not begin in or end in '/'")
+    }
+    this.name = name
     this.definition = schema.definition
     this.schema = schema
     this.index = index
@@ -390,7 +394,9 @@ class Table extends SQLBase {
   }
 
   getColumn (columnName) {
-    return this.columns.find(c => c.name === columnName)
+    const column = this.columns.find(c => c.name === columnName)
+    if (!column) throw new Error(`No column named "${ columnName }"`)
+    return column
   }
 
   async getRow (cid, get, cache) {
@@ -410,6 +416,7 @@ class Table extends SQLBase {
   }
 
   async * _insert ({ opts, table, inserts, get, cache, database }) {
+    if (!get) throw new Error('no get')
     let rows
     let list
     let blocks = []
@@ -440,13 +447,21 @@ class Table extends SQLBase {
 
     const writeIndex = async (column, i) => {
       const entries = []
-      for (const { key, row, changes } of list) {
+      for (let { key, row, changes } of list) {
         if (changes && typeof changes[column.name] !== 'undefined') {
           entries.push({ key: [changes[column.name], key], del: true })
         }
-        const val = row.getIndex(i)
+        const value = row.block.cid
+        let val = row.getIndex(i)
+        let path
+        while (typeof val === 'object') {
+          path = val.path
+          const block = await get(val.link)
+          row = await this.createRow({ block })
+          val = row.get(path)
+        }
         if (typeof val !== 'undefined') {
-          entries.push({ key: [val, key], row, value: row.block.cid })
+          entries.push({ key: [val, key], row, value })
         }
       }
       if (!entries.length) return column.index ? column.index : null

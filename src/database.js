@@ -84,6 +84,15 @@ const runSelect = async function * (select, cids) {
   for await (const { entry, table } of select.where(cids)) {
     cids.add({ address: entry.value })
     const result = await select.columns(entry, table)
+    const _traverse = async row => {
+      const block = await select.db.get(row.link)
+      return traverse(table.createRow({ block }).get(row.path))
+    }
+    const traverse = row => {
+      if (typeof row !== 'object') return row
+      return _traverse(row)
+    }
+    result.columns = await Promise.all(result.columns.map(traverse))
     yield { entry, table, ...result }
   }
 }

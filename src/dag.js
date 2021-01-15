@@ -73,7 +73,7 @@ class DAGAPI {
   }
 
   async * write ({ create, insert }) {
-    const { get, db } = this.ipsql
+    const { getBlock: get, db } = this.ipsql
     const { chunker, cache } = db
     if (create) {
       const { name, columns: columnString } = create

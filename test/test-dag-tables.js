@@ -4,6 +4,7 @@ import { bf } from 'chunky-trees/utils'
 import { sha256 as hasher } from 'multiformats/hashes/sha2'
 import { deepStrictEqual as same } from 'assert'
 import cache from '../src/cache.js'
+import { encode } from '../src/utils.js'
 
 const chunker = bf(256)
 
@@ -109,5 +110,21 @@ describe('dag tables', () => {
     same(results, [['hello']])
     results = await ipsql.read('SELECT firstname FROM test WHERE firstname = "world"')
     same(results, [['world']])
+  })
+
+  it('insert linked data', async () => {
+    let ipsql = await create('test', '`one/two/three` VARCHAR(255)')
+
+    const sub = await encode({ three: 'test' })
+    const block = await encode({ one: { two: sub.cid }, pass: true })
+    await Promise.all([sub, block].map(b => ipsql.putBlock(b)))
+
+    ipsql = await ipsql.dt.insert('test', block)
+
+    let results = await ipsql.read('SELECT pass FROM test WHERE `one/two/three` = "test"')
+    same(results, [ [ true ] ])
+
+    results = await ipsql.read('SELECT `one/two/three` FROM test WHERE `one/two/three` = "test"')
+    same(results, [ [ 'test' ] ])
   })
 })
