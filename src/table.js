@@ -412,11 +412,19 @@ class Table extends SQLBase {
   async * _insert ({ opts, table, inserts, get, cache, database }) {
     let rows
     let list
-    let writeIndex
     let blocks = []
+    let i = 1
     if (table.rows !== null) {
-      let i = await table.rows.getLength()
-      list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
+      i = await table.rows.getLength()
+    }
+    list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
+
+    if (table.rows === null) {
+      for await (const node of createSparseArray({ list, ...opts })) {
+        yield node.block
+        rows = node
+      }
+    } else {
       const { blocks: __blocks, root, previous } = await table.rows.bulk(list)
       rows = root
       yield * __blocks
@@ -428,54 +436,31 @@ class Table extends SQLBase {
         }
         return { key, row, value, changes }
       }))
-      writeIndex = async (column, i) => {
-        const entries = []
-        for (const { key, row, changes } of list) {
-          if (changes && typeof changes[column.name] !== 'undefined') {
-            entries.push({ key: [changes[column.name], key], del: true })
-          }
-          const val = row.getIndex(i)
-          if (typeof val !== 'undefined') {
-            entries.push({ key: [val, key], row, value: row.block.cid })
-          }
-        }
-        if (!entries.length) return column.index ? column.index : null
-        if (!column.index) {
-          let index = null
-          for await (const node of createDBIndex({ list: entries, ...opts })) {
-            blocks.push(node.block)
-            index = node
-          }
-          return index
-        } else {
-          const { blocks: _blocks, root } = await column.index.bulk(entries)
-          _blocks.forEach(b => blocks.push(b))
-          return root
-        }
-      }
-    } else {
-      let i = 1
-      list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
+    }
 
-      for await (const node of createSparseArray({ list, ...opts })) {
-        yield node.block
-        rows = node
-      }
-      writeIndex = async (column, i) => {
-        const entries = []
-        for (const { key, row } of list) {
-          const val = row.getIndex(i)
-          if (typeof val !== 'undefined') {
-            entries.push({ key: [val, key], row, value: row.block.cid })
-          }
+    const writeIndex = async (column, i) => {
+      const entries = []
+      for (const { key, row, changes } of list) {
+        if (changes && typeof changes[column.name] !== 'undefined') {
+          entries.push({ key: [changes[column.name], key], del: true })
         }
-        if (!entries.length) return column.index ? column.index : null
+        const val = row.getIndex(i)
+        if (typeof val !== 'undefined') {
+          entries.push({ key: [val, key], row, value: row.block.cid })
+        }
+      }
+      if (!entries.length) return column.index ? column.index : null
+      if (!column.index) {
         let index = null
         for await (const node of createDBIndex({ list: entries, ...opts })) {
           blocks.push(node.block)
           index = node
         }
         return index
+      } else {
+        const { blocks: _blocks, root } = await column.index.bulk(entries)
+        _blocks.forEach(b => blocks.push(b))
+        return root
       }
     }
 
