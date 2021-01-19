@@ -122,9 +122,9 @@ describe('dag tables', () => {
     ipsql = await ipsql.dt.insert('test', block)
 
     let results = await ipsql.read('SELECT pass FROM test WHERE `one/two/three` = "test"')
-    same(results, [ [ true ] ])
+    same(results, [[true]])
 
     results = await ipsql.read('SELECT `one/two/three` FROM test WHERE `one/two/three` = "test"')
-    same(results, [ [ 'test' ] ])
+    same(results, [['test']])
   })
 })

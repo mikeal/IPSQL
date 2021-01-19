@@ -395,7 +395,7 @@ class Table extends SQLBase {
 
   getColumn (columnName) {
     const column = this.columns.find(c => c.name === columnName)
-    if (!column) throw new Error(`No column named "${ columnName }"`)
+    if (!column) throw new Error(`No column named "${columnName}"`)
     return column
   }
 
