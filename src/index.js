@@ -3,12 +3,7 @@ import { Database } from './database.js'
 import { nocache } from 'chunky-trees/cache'
 import { bf } from 'chunky-trees/utils'
 import { DAGAPI } from './dag.js'
-
-const immutable = (obj, props) => {
-  for (const [key, value] of Object.entries(props)) {
-    Object.defineProperty(obj, key, { value, writable: false, enumerable: true })
-  }
-}
+import { immutable } from './utils.js'
 
 const defaults = { cache: nocache, chunker: bf(256) }
 
@@ -22,7 +17,7 @@ const layerStorage = ({ get, put }) => {
     return block
   }
   const putBlock = async block => {
-    let ret = await put(block)
+    const ret = await put(block)
     cache.set(block.cid, block)
     return ret
   }

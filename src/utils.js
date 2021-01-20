@@ -30,4 +30,12 @@ class SQLBase {
   }
 }
 
-export { immediate, getNode, mf, encode, decode, codec, hasher, createBlock, SQLBase }
+const immutable = (obj, props) => {
+  const writes = {}
+  for (const [key, value] of Object.entries(props)) {
+    writes[key] = { value, writable: false, enumerable: true }
+  }
+  Object.defineProperties(obj, writes)
+}
+
+export { immediate, immutable, getNode, mf, encode, decode, codec, hasher, createBlock, SQLBase }

@@ -3,8 +3,6 @@ import levelup from 'levelup'
 import encoding from 'encoding-down'
 import charwise from 'charwise'
 
-const empty = new Uint8Array(0)
-
 class LevelStore extends KVStore {
   constructor (leveldown, opts = {}) {
     super(opts)
@@ -18,10 +16,6 @@ class LevelStore extends KVStore {
 
   _put (arr, body) {
     return this.lev.put(this._mkey(arr), body)
-  }
-
-  _putKey (arr) {
-    return this._put(arr, empty)
   }
 
   async _hasKey (arr) {

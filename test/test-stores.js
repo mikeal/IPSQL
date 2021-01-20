@@ -2,16 +2,21 @@
 import InMemory from '../src/stores/inmemory.js'
 import S3 from '../src/stores/s3.js'
 import { same } from './lib.js'
-import { CID } from 'multiformats'
+import MockS3 from './lib/mock-s3.js'
 
 const stores = {
-  // 's3': S3,
+  s3: S3,
   inmem: InMemory
 }
 
 describe('updates', () => {
   for (const [name, Store] of Object.entries(stores)) {
-    const create = q => Store.create(q)
+    let create
+    if (name === 's3') {
+      create = q => Store.create(q, { s3: new MockS3() })
+    } else {
+      create = q => Store.create(q)
+    }
     describe(name, () => {
       let cid
       it('insert twice', async () => {
@@ -25,7 +30,7 @@ describe('updates', () => {
         all = await ipsql.read('SELECT * FROM Test WHERE String = \'a\'')
         same(all, [[10, 'a'], [11, 'a']])
         cid = ipsql.db.block.cid
-        same(await ipsql.has(cid), true)
+        same(!!(await ipsql.has(cid)), true)
       })
       it('not found', async () => {
         const s = await create('CREATE TABLE Test (ID int)')
@@ -38,6 +43,7 @@ describe('updates', () => {
           if (e.statusCode !== 404) throw e
         }
         same(threw, true)
+        same(!(await s.has(cid)), true)
       })
       /*
       it('insert twice, missing column in first insert', async () => {

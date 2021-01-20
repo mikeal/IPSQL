@@ -15,6 +15,7 @@ class InMemory extends IPSQLStore {
       enumerable: true
     })
   }
+
   async put (block) {
     this.storage.set(block.cid.toString(), block)
   }
