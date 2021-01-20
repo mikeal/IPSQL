@@ -30,12 +30,13 @@ const layerStorage = ({ get, put }) => {
 }
 
 class IPSQL {
-  constructor ({ cid, get, put, db }) {
-    if (!get) get = this.get.bind(this)
-    if (!put) put = this.put.bind(this)
+  constructor ({ cid, get, put, db, cache, chunker }) {
+    /* If this is bound to a storage interface never overwrite its storage methods */
+    if (this.get) get = this.get.bind(this)
+    if (this.put) put = this.put.bind(this)
     if (!db) throw new Error('Missing required argument')
     const dt = new DAGAPI(this)
-    const props = { cid, db, dt, ...layerStorage({ get, put }) }
+    const props = { cid, db, dt, get, put, ...layerStorage({ get, put }), cache, chunker }
     immutable(this, props)
   }
 
@@ -63,9 +64,7 @@ class IPSQL {
       await this.putBlock(block)
       last = block
     }
-    const { getBlock: get, putBlock: put } = this
-    const opts = { get, put, cache: this.db.cache, chunker: this.db.chunker }
-    return this.constructor.from(last.cid, opts)
+    return this.constructor.from(last.cid, { ...this })
   }
 
   async read (q, full) {
@@ -95,11 +94,12 @@ class IPSQL {
     return db.write(q)
   }
 
-  static async from (cid, { get, put, cache, chunker }) {
+  static async from (cid, { ...opts } = {}) {
     if (typeof cid === 'string') cid = CID.parse(cid)
-    const opts = { get, cache: cache || defaults.cache, chunker: chunker || defaults.chunker }
+    opts.cache = opts.cache || defaults.cache
+    opts.chunker = opts.chunker || defaults.chunker
     const db = await Database.from(cid, opts)
-    return new this({ ...opts, put, db, cid })
+    return new this({ ...opts, db, cid })
   }
 }
 

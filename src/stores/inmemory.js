@@ -6,20 +6,26 @@ class Missing extends Error {
   }
 }
 
-const storage = new Map()
-
 class InMemory extends IPSQLStore {
+  constructor (opts) {
+    super(opts)
+    Object.defineProperty(this, 'storage', {
+      value: opts.storage || new Map(),
+      writable: false,
+      enumerable: true
+    })
+  }
   async put (block) {
-    storage.set(block.cid.toString(), block)
+    this.storage.set(block.cid.toString(), block)
   }
 
   async has (cid) {
-    return storage.has(cid.toString())
+    return this.storage.has(cid.toString())
   }
 
   async get (cid) {
     const key = cid.toString()
-    const value = storage.get(key)
+    const value = this.storage.get(key)
     if (!value) throw new Missing(`Do not have ${key} in store`)
     return value
   }

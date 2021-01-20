@@ -2,6 +2,7 @@
 import InMemory from '../src/stores/inmemory.js'
 import S3 from '../src/stores/s3.js'
 import { same } from './lib.js'
+import { CID } from 'multiformats'
 
 const stores = {
   // 's3': S3,
@@ -12,6 +13,7 @@ describe('updates', () => {
   for (const [name, Store] of Object.entries(stores)) {
     const create = q => Store.create(q)
     describe(name, () => {
+      let cid
       it('insert twice', async () => {
         let ipsql = await create('CREATE TABLE Test (ID int, String varchar(255))')
         ipsql = await ipsql.write('INSERT INTO Test VALUES ( 10, \'a\' )')
@@ -22,7 +24,20 @@ describe('updates', () => {
         same(all, [[10, 'a']])
         all = await ipsql.read('SELECT * FROM Test WHERE String = \'a\'')
         same(all, [[10, 'a'], [11, 'a']])
-        same(await ipsql.has(ipsql.db.block.cid), true)
+        cid = ipsql.db.block.cid
+        same(await ipsql.has(cid), true)
+      })
+      it('not found', async () => {
+        const s = await create('CREATE TABLE Test (ID int)')
+        if (!cid) throw new Error('CID was not set')
+        let threw = true
+        try {
+          await s.get(cid)
+          threw = false
+        } catch (e) {
+          if (e.statusCode !== 404) throw e
+        }
+        same(threw, true)
       })
       /*
       it('insert twice, missing column in first insert', async () => {
