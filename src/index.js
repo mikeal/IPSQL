@@ -14,14 +14,12 @@ const defaults = { cache: nocache, chunker: bf(256) }
 
 class IPSQL {
   constructor ({ cid, get, put, db }) {
-    if (!get || !put || !db) throw new Error('Missing required argument')
+    if (!get) get = this.get.bind(this)
+    if (!put) put = this.put.bind(this)
+    if (!db) throw new Error('Missing required argument')
     const dt = new DAGAPI(this)
     const props = { cid, db, getBlock: get, putBlock: put, dt }
     immutable(this, props)
-  }
-
-  get IPSQL () {
-    return IPSQL
   }
 
   cids () {
@@ -50,7 +48,7 @@ class IPSQL {
     }
     const { getBlock: get, putBlock: put } = this
     const opts = { get, put, cache: this.db.cache, chunker: this.db.chunker }
-    return IPSQL.from(last.cid, opts)
+    return this.constructor.from(last.cid, opts)
   }
 
   async read (q, full) {
@@ -76,7 +74,7 @@ class IPSQL {
   static create (q, opts = {}) {
     opts.cache = opts.cache || defaults.cache
     opts.chunker = opts.chunker || defaults.chunker
-    const db = new IPSQL({ ...opts, db: Database.create(opts) })
+    const db = new this({ ...opts, db: Database.create(opts) })
     return db.write(q)
   }
 
@@ -84,7 +82,7 @@ class IPSQL {
     if (typeof cid === 'string') cid = CID.parse(cid)
     const opts = { get, cache: cache || defaults.cache, chunker: chunker || defaults.chunker }
     const db = await Database.from(cid, opts)
-    return new IPSQL({ ...opts, put, db, cid })
+    return new this({ ...opts, put, db, cid })
   }
 }
 

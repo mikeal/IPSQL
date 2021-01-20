@@ -4,8 +4,16 @@ import { nocache } from 'chunky-trees/cache'
 import { bf } from 'chunky-trees/utils'
 import { SparseArrayLeaf } from 'chunky-trees/sparse-array'
 import { DBIndexLeaf, DBIndexBranch } from 'chunky-trees/db-index'
+import InMemory from '../src/stores/inmemory.js'
 
-import { create, same, storage } from './lib.js'
+import { create, same } from './lib.js'
+
+const storage = () => {
+  const store = new InMemory({ db: true })
+  const get = store.get.bind(store)
+  const put = store.put.bind(store)
+  return { store, get, put }
+}
 
 const chunker = bf(3)
 
