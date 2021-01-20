@@ -12,13 +12,30 @@ const immutable = (obj, props) => {
 
 const defaults = { cache: nocache, chunker: bf(256) }
 
+const cache = new WeakMap()
+
+const layerStorage = ({ get, put }) => {
+  const getBlock = async cid => {
+    let block = cache.get(cid)
+    if (!block) block = await get(cid)
+    cache.set(cid, block)
+    return block
+  }
+  const putBlock = async block => {
+    let ret = await put(block)
+    cache.set(block.cid, block)
+    return ret
+  }
+  return { getBlock, putBlock }
+}
+
 class IPSQL {
   constructor ({ cid, get, put, db }) {
     if (!get) get = this.get.bind(this)
     if (!put) put = this.put.bind(this)
     if (!db) throw new Error('Missing required argument')
     const dt = new DAGAPI(this)
-    const props = { cid, db, getBlock: get, putBlock: put, dt }
+    const props = { cid, db, dt, ...layerStorage({ get, put }) }
     immutable(this, props)
   }
 
