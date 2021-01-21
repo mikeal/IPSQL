@@ -19,6 +19,7 @@ import { randomBytes } from 'crypto'
 import { writeFileSync, readFileSync, createReadStream, createWriteStream } from 'fs'
 import { sha256 as hasher } from 'multiformats/hashes/sha2'
 import { encrypt, decrypt } from './crypto.js'
+import S3 from '../src/stores/s3.js'
 
 const httpGet = bent({ 'user-agent': 'ipsql-v0' })
 const httpGetString = bent('string', { 'user-agent': 'ipsql-v0' })
@@ -87,32 +88,58 @@ const inmem = () => {
 }
 
 const getStore = async argv => {
-  if (argv.store === 'inmem' || argv.store === 'inmemory') {
-    return inmem()
-  }
+  const _getStore = async store => {
+    let get
+    let put
+    let root
 
-  let store
-  let get
-  let put
-  let root
-
-  if (argv.store) {
+    if (store === 'inmem' || store === 'inmemory') return inmem()
     // TODO: support tcp URLs as a store
-    const { reader } = await getReader(argv.store)
-    const [_root] = await reader.getRoots()
-    root = _root
-    get = (...args) => reader.get(...args).then(({ bytes, cid }) => createBlock(bytes, cid))
-    put = readOnly
-    // TODO: when we support S3 and leveldb this will need a put method as well
+    if (store.endsWith('.car')) {
+      const { reader } = await getReader(store)
+      const [_root] = await reader.getRoots()
+      root = _root
+      get = (...args) => reader.get(...args).then(({ bytes, cid }) => createBlock(bytes, cid))
+      put = readOnly
+      // TODO: when we support S3 and leveldb this will need a put method as well
+    } else if (store.startsWith('s3://')) {
+      store = S3.getStore(store)
+      get = store.get
+      put = store.put
+      root = store.root
+    } else {
+      throw new Error('Not implemented')
+    }
+    return { store, get, put, root }
   }
+  let { get, put, root, store } = argv.store ? await _getStore(argv.store) : {}
 
-  if (argv.input === 'inmem' || argv.input === 'inmemory') {
-    store = inmem()
+  if (argv.input) {
+    store = await _getStore(argv.input)
     get = store.get
+    if (store.root) root = store.root
   }
-  if (argv.output === 'inmem' || argv.input === 'inmemory') {
-    if (!store) store = inmem()
-    put = store.put
+  if (argv.output) {
+    const cache = inmem()
+    store = await _getStore(argv.output)
+    put = async block => {
+      await cache.put(block)
+      return store.put(block)
+    }
+    if (get) {
+      const _get = get
+      get = async cid => {
+        try {
+          const ret = await cache.get(cid)
+          return ret
+        } catch (e) {
+        }
+        return _get(cid)
+      }
+    } else {
+      get = cache.get
+    }
+    if (store.root) root = store.root
   }
   if (!get || !put) throw new Error('Cannot configure storage')
   return { get, put, root }
@@ -190,7 +217,7 @@ const fromURI = async (uri, put, store, key) => {
 const readOnly = block => { throw new Error('Read-only storage mode, cannot write blocks') }
 
 const runExport = async ({ argv, cids, root, getBlock, store }) => {
-  if (!cids) throw new Error('asdf')
+  if (!argv.export) argv.export = argv.output
   if (!argv.export.endsWith('.car')) throw new Error('Can only export CAR files')
 
   if (store) {
@@ -282,7 +309,8 @@ const runRepl = async argv => {
 const getTableName = argv => argv.tableName || argv.input.slice(argv.input.lastIndexOf('/') + 1)
 
 const preImport = async (argv, store) => {
-  if (!store) store = await getStore(argv)
+  if (argv.export) argv.output = argv.export
+  if (!store) store = await getStore({ ...argv, input: 'inmem' })
   let input
   if (isHttpUrl(argv.input)) {
     input = await httpGetString(argv.input)
@@ -302,15 +330,26 @@ const preImport = async (argv, store) => {
 }
 
 const runImportExport = async (argv) => {
-  argv.export = argv.output
-  const { db, store } = await preImport(argv, inmem())
+  let _store
+  if (argv.output.endsWith('.car')) {
+    _store = inmem()
+  }
+  const { db, store } = await preImport(argv, _store)
   let cids
   if (argv.query) {
     cids = await db.read(argv.query, true).then(({ cids }) => cids.all())
   } else {
     cids = await db.cids()
   }
-  return await runExport({ argv, cids, root: db.cid, store })
+
+  if (argv.output.endsWith('.car')) {
+    return await runExport({ argv, cids, root: db.cid, store })
+  } else if (argv.output.startsWith('s3://')) {
+    const { hostname, pathname } = new URL(argv.output)
+    console.log(`s3://${hostname}/${pathname}/${db.id}.cid`)
+  } else {
+    throw new Error('Not implemented')
+  }
 }
 
 const runImportRepl = async (argv) => {

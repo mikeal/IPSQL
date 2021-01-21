@@ -58,8 +58,10 @@
     "standard": "^16.0.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.3.0",
     "@ipld/car": "^0.1.2",
     "@ipld/dag-cbor": "^2.0.3",
+    "aws-config": "^1.4.0",
     "bent": "^7.3.12",
     "charwise": "^3.0.1",
     "chunky-trees": "^1.2.0",

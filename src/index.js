@@ -55,10 +55,12 @@ class IPSQL {
     }
 
     let last
+    const promises = []
     for await (const block of iter) {
-      await this.putBlock(block)
+      promises.push(this.putBlock(block))
       last = block
     }
+    await Promise.all(promises)
     return this.constructor.from(last.cid, { ...this })
   }
 

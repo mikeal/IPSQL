@@ -454,7 +454,7 @@ class Table extends SQLBase {
         const value = row.block.cid
         let val = row.getIndex(i)
         let path
-        while (typeof val === 'object') {
+        while (val && typeof val === 'object') {
           path = val.path
           const block = await get(val.link)
           row = await this.createRow({ block })
