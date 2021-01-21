@@ -53,17 +53,23 @@
   },
   "devDependencies": {
     "hundreds": "0.0.9",
+    "memdown": "^5.1.0",
     "mocha": "^8.2.1",
     "standard": "^16.0.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.3.0",
     "@ipld/car": "^0.1.2",
     "@ipld/dag-cbor": "^2.0.3",
+    "aws-config": "^1.4.0",
     "bent": "^7.3.12",
+    "charwise": "^3.0.1",
     "chunky-trees": "^1.2.0",
     "cliffy": "^2.4.2",
+    "encoding-down": "^6.3.0",
     "encrypted-block": "0.0.3",
     "get-port": "^5.1.1",
+    "levelup": "^4.4.0",
     "multiformats": "^4.4.3",
     "papaparse": "^5.3.0",
     "public-ip": "^4.0.3",

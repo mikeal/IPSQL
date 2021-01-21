@@ -3,25 +3,36 @@ import { Database } from './database.js'
 import { nocache } from 'chunky-trees/cache'
 import { bf } from 'chunky-trees/utils'
 import { DAGAPI } from './dag.js'
-
-const immutable = (obj, props) => {
-  for (const [key, value] of Object.entries(props)) {
-    Object.defineProperty(obj, key, { value, writable: false, enumerable: true })
-  }
-}
+import { immutable } from './utils.js'
 
 const defaults = { cache: nocache, chunker: bf(256) }
 
-class IPSQL {
-  constructor ({ cid, get, put, db }) {
-    if (!get || !put || !db) throw new Error('Missing required argument')
-    const dt = new DAGAPI(this)
-    const props = { cid, db, getBlock: get, putBlock: put, dt }
-    immutable(this, props)
-  }
+const cache = new WeakMap()
 
-  get IPSQL () {
-    return IPSQL
+const layerStorage = ({ get, put }) => {
+  const getBlock = async cid => {
+    let block = cache.get(cid)
+    if (!block) block = await get(cid)
+    cache.set(cid, block)
+    return block
+  }
+  const putBlock = async block => {
+    const ret = await put(block)
+    cache.set(block.cid, block)
+    return ret
+  }
+  return { getBlock, putBlock }
+}
+
+class IPSQL {
+  constructor ({ cid, get, put, db, cache, chunker }) {
+    /* If this is bound to a storage interface never overwrite its storage methods */
+    if (this.get) get = this.get.bind(this)
+    if (this.put) put = this.put.bind(this)
+    if (!db) throw new Error('Missing required argument')
+    const dt = new DAGAPI(this)
+    const props = { cid, db, dt, get, put, ...layerStorage({ get, put }), cache, chunker }
+    immutable(this, props)
   }
 
   cids () {
@@ -44,13 +55,13 @@ class IPSQL {
     }
 
     let last
+    const promises = []
     for await (const block of iter) {
-      await this.putBlock(block)
+      promises.push(this.putBlock(block))
       last = block
     }
-    const { getBlock: get, putBlock: put } = this
-    const opts = { get, put, cache: this.db.cache, chunker: this.db.chunker }
-    return IPSQL.from(last.cid, opts)
+    await Promise.all(promises)
+    return this.constructor.from(last.cid, { ...this })
   }
 
   async read (q, full) {
@@ -73,18 +84,19 @@ class IPSQL {
     return data
   }
 
-  static create (q, opts = {}) {
+  static create (q, { ...opts } = {}) {
     opts.cache = opts.cache || defaults.cache
     opts.chunker = opts.chunker || defaults.chunker
-    const db = new IPSQL({ ...opts, db: Database.create(opts) })
+    const db = new this({ ...opts, db: Database.create(opts) })
     return db.write(q)
   }
 
-  static async from (cid, { get, put, cache, chunker }) {
+  static async from (cid, { ...opts } = {}) {
     if (typeof cid === 'string') cid = CID.parse(cid)
-    const opts = { get, cache: cache || defaults.cache, chunker: chunker || defaults.chunker }
+    opts.cache = opts.cache || defaults.cache
+    opts.chunker = opts.chunker || defaults.chunker
     const db = await Database.from(cid, opts)
-    return new IPSQL({ ...opts, put, db, cid })
+    return new this({ ...opts, db, cid })
   }
 }
 
