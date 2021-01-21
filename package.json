@@ -10,7 +10,7 @@
   "scripts": {
     "build": "npm_config_yes=true npx ipjs@latest build --tests && npm run build:bin",
     "publish": "npm_config_yes=true npx ipjs@latest publish",
-    "build:bin": "chmod 755 dist/esm/cli/bin.js",
+    "build:bin": "cp -R cli/bin.js dist/esm/cli/bin.js",
     "lint": "standard",
     "test:cjs": "npm run build && mocha dist/cjs/node-test/test-*.js",
     "test:node": "mocha test/test-*.js",
@@ -25,9 +25,6 @@
   "exports": {
     ".": {
       "import": "./src/index.js"
-    },
-    "./bin": {
-      "import": "./cli/bin.js"
     },
     "./cli": {
       "import": "./cli/cli.js"
