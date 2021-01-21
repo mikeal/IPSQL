@@ -5,7 +5,6 @@ import { DAGAPI } from './dag.js'
 import { immutable } from './utils.js'
 
 const defaults = { cache: nocache }
-
 const cache = new WeakMap()
 
 const layerStorage = ({ get, put }) => {
