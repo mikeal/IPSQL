@@ -1,17 +1,17 @@
 import IPSQLStore from './base.js'
 import LRU from 'lru-cache'
+import { immutable } from '../utils.js'
 
 const defaultSize = 1024 * 1024 * 50
-const getLength = block => block.bytes.length
+const getLength = block => block.bytes.byteLength + block.cid.bytes.byteLength
 
 class LRUStore extends IPSQLStore {
-  constructor (opts = {}) {
+  constructor (opts) {
     super(opts)
-    if (typeof opts.lru === 'undefined') opts.lru = true
-    if (opts.lru) {
-      this.lru = new LRU({ max: opts.lruSize || defaultSize, length: getLength })
-    }
-    this.depthLimit = opts.depthLimit || 1024
+    if (opts.lru === false) return immutable(this, { lru: false })
+    immutable(this, {
+      lru: opts.lru || new LRU({ max: opts.lruSize || defaultSize, length: getLength })
+    })
   }
 
   async get (cid) {

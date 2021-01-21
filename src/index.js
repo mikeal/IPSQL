@@ -82,7 +82,7 @@ class IPSQL {
     return data
   }
 
-  static create (q, opts = {}) {
+  static create (q, { ...opts } = {}) {
     opts.cache = opts.cache || defaults.cache
     opts.chunker = opts.chunker || defaults.chunker
     const db = new this({ ...opts, db: Database.create(opts) })

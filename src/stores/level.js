@@ -2,12 +2,15 @@ import KVStore from './kv.js'
 import levelup from 'levelup'
 import encoding from 'encoding-down'
 import charwise from 'charwise'
+import { immutable } from '../utils.js'
 
 class LevelStore extends KVStore {
-  constructor (leveldown, opts = {}) {
+  constructor ({ leveldown, ...opts }) {
     super(opts)
-    this.lev = levelup(encoding(leveldown, { valueEncoding: 'binary', keyEncoding: charwise }))
-    this.prefix = opts.prefix || '_kv-bs'
+    immutable(this, {
+      lev: opts.lev || levelup(encoding(leveldown, { valueEncoding: 'binary', keyEncoding: charwise })),
+      prefix: opts.prefix || '_kv-bs'
+    })
   }
 
   _mkey (arr) {
@@ -39,16 +42,6 @@ class LevelStore extends KVStore {
       e.statusCode = e.status
       throw e
     } /* c8 ignore next */
-  }
-
-  static async from (cid, { leveldown, ...opts }) {
-    const store = new LevelStore(leveldown, opts)
-    return LevelStore._from({ cid, store, ...opts })
-  }
-
-  static async create (q, { leveldown, ...opts }) {
-    const store = new LevelStore(leveldown, opts)
-    return LevelStore._create(q, { store, ...opts })
   }
 }
 
