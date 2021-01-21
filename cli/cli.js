@@ -345,8 +345,9 @@ const runImportExport = async (argv) => {
   if (argv.output.endsWith('.car')) {
     return await runExport({ argv, cids, root: db.cid, store })
   } else if (argv.output.startsWith('s3://')) {
-    const { hostname, pathname } = new URL(argv.output)
-    console.log(`s3://${hostname}/${pathname}/${db.id}.cid`)
+    let { hostname, pathname } = new URL(argv.output)
+    if (pathname.length && !pathname.endsWith('/')) pathname += '/'
+    console.log(`s3://${hostname}/${pathname}${db.id}.cid`)
   } else {
     throw new Error('Not implemented')
   }
