@@ -1,11 +1,10 @@
 import { CID } from 'multiformats'
 import { Database } from './database.js'
 import { nocache } from 'chunky-trees/cache'
-import { bf } from 'chunky-trees/utils'
 import { DAGAPI } from './dag.js'
 import { immutable } from './utils.js'
 
-const defaults = { cache: nocache, chunker: bf(256) }
+const defaults = { cache: nocache }
 
 const cache = new WeakMap()
 
@@ -25,13 +24,13 @@ const layerStorage = ({ get, put }) => {
 }
 
 class IPSQL {
-  constructor ({ cid, get, put, db, cache, chunker }) {
+  constructor ({ cid, get, put, db, cache }) {
     /* If this is bound to a storage interface never overwrite its storage methods */
     if (this.get) get = this.get.bind(this)
     if (this.put) put = this.put.bind(this)
     if (!db) throw new Error('Missing required argument')
     const dt = new DAGAPI(this)
-    const props = { cid, db, dt, get, put, ...layerStorage({ get, put }), cache, chunker }
+    const props = { cid, db, dt, get, put, ...layerStorage({ get, put }), cache }
     immutable(this, props)
   }
 
@@ -51,7 +50,7 @@ class IPSQL {
         throw new Error('Don\'t understand query')
       }
     } else {
-      iter = this.db.sql(q, { chunker: this.db.chunker })
+      iter = this.db.sql(q)
     }
 
     let last
@@ -86,7 +85,6 @@ class IPSQL {
 
   static create (q, { ...opts } = {}) {
     opts.cache = opts.cache || defaults.cache
-    opts.chunker = opts.chunker || defaults.chunker
     const db = new this({ ...opts, db: Database.create(opts) })
     return db.write(q)
   }
@@ -94,7 +92,6 @@ class IPSQL {
   static async from (cid, { ...opts } = {}) {
     if (typeof cid === 'string') cid = CID.parse(cid)
     opts.cache = opts.cache || defaults.cache
-    opts.chunker = opts.chunker || defaults.chunker
     const db = await Database.from(cid, opts)
     return new this({ ...opts, db, cid })
   }

@@ -1,11 +1,29 @@
 import { create as createSparseArray, load as loadSparseArray } from 'chunky-trees/sparse-array'
 import { create as createDBIndex, load as loadDBIndex } from 'chunky-trees/db-index'
-import { CIDCounter } from 'chunky-trees/utils'
+import { CIDCounter, bf } from 'chunky-trees/utils'
 import { encode, mf, SQLBase, getNode } from './utils.js'
 
 const pluck = node => node.result
 
 const registry = {}
+
+const getColumnChunkerTarget = schema => {
+  let { dataType, length } = schema.definition
+  if (!length) {
+    if (dataType === 'INTEGER') {
+      length = integerEstimate
+    } else if (dataType === 'FLOAT') {
+      length = floatEstimate
+    } else {
+      throw new Error(`Not Implemented, do not have estimate for ${dataType} branching factor`)
+    }
+  }
+  length += cidEstimate
+  length += tokenEstimate + 1
+  length += integerEstimate
+  const target = Math.floor(500000 / length)
+  return target
+}
 
 class Column extends SQLBase {
   constructor ({ schema, index, ...opts }) {
@@ -25,15 +43,26 @@ class Column extends SQLBase {
     return { schema: this.schema, index }
   }
 
+  get chunkerTarget () {
+    return getColumnChunkerTarget(this.schema)
+  }
+
   static create (schema) {
+    if (schema.definition.dataType === 'INT') {
+      // normalize to one schema def
+      schema.definition.dataType = 'INTEGER'
+    }
+    schema.chunkerTarget = getColumnChunkerTarget(schema)
     return new Column({ schema, index: null })
   }
 
-  static from (cid, { get, cache, chunker }) {
+  static from (cid, { get, cache }) {
     const create = async (block) => {
       let { schema, index } = block.value
       if (index !== null) {
-        index = await loadDBIndex({ cid: index, get, cache, chunker, ...mf })
+        if (!schema.chunkerTarget) throw new Error('No chunker target size')
+        const chunker = bf(schema.chunkerTarget)
+        index = await loadDBIndex({ cid: index, get, chunker, cache, ...mf })
       }
       return new Column({ index, schema, get, cache, block })
     }
@@ -188,7 +217,7 @@ class Row {
   }
 }
 
-const tableInsert = async function * (table, ast, { database, chunker }) {
+const tableInsert = async function * (table, ast, { database }) {
   const cids = new CIDCounter()
   const { get, cache } = database
 
@@ -247,7 +276,7 @@ const tableInsert = async function * (table, ast, { database, chunker }) {
       inserts.push({ block, row: _row })
     }
   }
-  const opts = { chunker, get, cache, ...mf }
+  const opts = { get, cache, ...mf }
 
   yield * table._insert({ opts, table, inserts, get, cache, database })
 }
@@ -368,6 +397,16 @@ class Where {
   }
 }
 
+const tokenEstimate = 3
+const integerEstimate = 4
+const floatEstimate = 8
+const cidEstimate = 36
+const tableChunkerTarget = Math.floor(500000 / (
+  tokenEstimate +
+  integerEstimate +
+  cidEstimate
+))
+
 class Table extends SQLBase {
   constructor ({ name, rows, columns, ...opts }) {
     super(opts)
@@ -415,6 +454,10 @@ class Table extends SQLBase {
     return tableInsert(this, ast, opts)
   }
 
+  get chunkerTarget () {
+    return tableChunkerTarget
+  }
+
   async * _insert ({ opts, table, inserts, get, cache, database }) {
     if (!get) throw new Error('no get')
     let rows
@@ -427,7 +470,9 @@ class Table extends SQLBase {
     list = inserts.map(({ block: { cid }, row, rowid }) => ({ key: rowid || i++, value: cid, row }))
 
     if (table.rows === null) {
-      for await (const node of createSparseArray({ list, ...opts })) {
+      const chunker = bf(this.chunkerTarget)
+      if (opts.chunker) throw new Error('opts should not have chunker')
+      for await (const node of createSparseArray({ ...opts, list, chunker })) {
         yield node.block
         rows = node
       }
@@ -467,7 +512,8 @@ class Table extends SQLBase {
       if (!entries.length) return column.index ? column.index : null
       if (!column.index) {
         let index = null
-        for await (const node of createDBIndex({ list: entries, ...opts })) {
+        const chunker = bf(column.chunkerTarget)
+        for await (const node of createDBIndex({ ...opts, chunker, list: entries })) {
           blocks.push(node.block)
           index = node
         }
@@ -518,10 +564,11 @@ class Table extends SQLBase {
     return table
   }
 
-  static from (cid, name, { get, cache, chunker }) {
+  static from (cid, name, { get, cache }) {
+    const chunker = bf(tableChunkerTarget)
     const create = async (block) => {
       let { columns, rows, type } = block.value
-      const promises = columns.map(cid => Column.from(cid, { get, cache, chunker }))
+      const promises = columns.map(cid => Column.from(cid, { get, cache }))
       if (rows !== null) {
         rows = loadSparseArray({ cid: rows, cache, get, chunker, ...mf })
       }
@@ -551,4 +598,4 @@ const createTable = async function * (database, ast) {
   yield encode(node)
 }
 
-export { Table, Column, Row, Where, createTable, registry }
+export { Table, Column, Row, Where, createTable, registry, tokenEstimate, integerEstimate, cidEstimate, tableChunkerTarget }

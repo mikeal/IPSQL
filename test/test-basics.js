@@ -1,7 +1,6 @@
 /* globals describe, it */
 import { Database } from '../src/database.js'
 import { nocache } from 'chunky-trees/cache'
-import { bf } from 'chunky-trees/utils'
 import { SparseArrayLeaf } from 'chunky-trees/sparse-array'
 import { DBIndexLeaf, DBIndexBranch } from 'chunky-trees/db-index'
 import InMemory from '../src/stores/inmemory.js'
@@ -14,8 +13,6 @@ const storage = () => {
   const put = store.put.bind(store)
   return { store, get, put }
 }
-
-const chunker = bf(3)
 
 const cache = nocache
 
@@ -42,14 +39,14 @@ const insertFullRow = 'INSERT INTO Persons VALUES (12, \'Rogers\', \'Mikeal\', \
 const insertTwoRows = insertFullRow + ', (13, \'Rogers\', \'NotMikeal\', \'241 AVB\', \'San Francisco\')'
 
 const runSQL = async (q, database = Database.create(), store = storage()) => {
-  const iter = database.sql(q, { chunker })
+  const iter = database.sql(q)
 
   let last
   for await (const block of iter) {
     await store.put(block)
     last = block
   }
-  const opts = { get: store.get, cache, chunker }
+  const opts = { get: store.get, cache }
   const db = await Database.from(last.cid, opts)
   return { database: db, store, cache, root: last.cid }
 }
@@ -84,7 +81,7 @@ const verifyPersonTable = table => {
   for (const column of table.columns) {
     const { name, dataType, length } = expected.shift()
     same(column.name, name)
-    same(column.schema.definition.dataType, dataType)
+    same(column.schema.definition.dataType, dataType !== 'INT' ? dataType : 'INTEGER')
     same(column.schema.definition.length, length)
   }
 }

@@ -1,12 +1,9 @@
 /* globals describe, it */
 import IPSQL from '../src/index.js'
-import { bf } from 'chunky-trees/utils'
 import { sha256 as hasher } from 'multiformats/hashes/sha2'
 import { deepStrictEqual as same } from 'assert'
 import cache from '../src/cache.js'
 import { encode } from '../src/utils.js'
-
-const chunker = bf(256)
 
 const inmem = () => {
   const store = {}
@@ -24,7 +21,7 @@ const inmem = () => {
 
 const mkopts = () => {
   const store = inmem()
-  return { ...store, store, cache: cache(), chunker, hasher }
+  return { ...store, store, cache: cache(), hasher }
 }
 
 const create = async (name, columns) => {

@@ -38,7 +38,7 @@ const main = ({ input, db, get, put, tableName, cache, chunker }) => {
         if (types[column] === 'boolean') columns.push(`\`${column}\` INTEGER`)
         if (!types[column]) skips.add(column)
       }
-      let sql = `CREATE TABLE \`${tableName}\` (${columns.join(', ')})`
+      let sql = `CREATE TABLE \`${tableName}\` (\n${columns.map(c => '  ' + c).join(',\n')}\n)`
       console.log(sql)
       let db = await IPSQL.create(sql, { get, put, chunker, cache })
 
