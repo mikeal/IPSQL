@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "bin": {
-    "ipsql": "./dist/esm/cli/bin.js"
+    "ipsql": "./esm/cli/bin.js"
   },
   "scripts": {
     "build": "npm_config_yes=true npx ipjs@latest build --tests && npm run build:bin",
