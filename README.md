@@ -6,6 +6,19 @@ and query language.
 This project is pre-alpha and under heavy active development. Do not use in production, breaking
 changes will land without notice.
 
+The JS API is currently considered internal until the churn in the code base dies down.
+
+* Features
+  * Traditional SQL [CREATE, UPDATE, SELECT, WHERE, etc](#sql-feature-checklist).
+  * Deltas and proofs for every database operation and query.
+    * You can replicate the data for only a single query as hash linked blocks.
+    * Every mutation creates deltas to prior states and even query deltas can
+      be replicated.
+  * Optional Encryption
+  * [DAG Tables](./docs/dag-tables.md) (JSON-like unstructured objects as rows, with column indexing an SQL queries still available)
+
+This project is built using a [tree building technique](https://0fps.net/2020/12/19/peer-to-peer-ordered-search-indexes/) implemented in the [chunky-trees](https://github.com/mikeal/chunky-trees) module.
+
 # CLI
 
 The primary way to interact with IPSQL right now is via the command line. You can install it with
@@ -28,16 +41,6 @@ Options:
   --version  Show version number                                       [boolean]
 ```
 
-The JS API is currently considered internal until the churn in the code base dies down.
-
-* Features
-  * Traditional SQL [CREATE, UPDATE, SELECT, WHERE, etc](#sql-feature-checklist).
-  * Deltas and proofs for every database operation and query.
-    * You can replicate the data for only a single query as hash linked blocks.
-    * Every mutation creates deltas to prior states and even query deltas can
-      be replicated.
-  * Optional Encryption
-  * [DAG Tables](./docs/dag-tables.md) (JSON-like unstructured objects as rows, with column indexing an SQL queries still available)
 * CLI
   * [Importing CSV files](./docs/importing-csv.md)
   * [Importing JSON files (into DAG tables)](./docs/importing-json.md)
