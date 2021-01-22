@@ -58,7 +58,7 @@ const main = ({ input, db, get, put, tableName, cache, chunker }) => {
         for (const column of meta.fields) {
           let value = row[column]
           const c = _columns.shift()
-          if (typeof value === 'number' && !c.endsWith('INTEGER')) {
+          if (typeof value === 'number' && !c.endsWith('INTEGER') && !c.endsWith('FLOAT')) {
             value = value.toString()
           }
           if (value === 'NULL') value = null

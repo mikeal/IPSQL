@@ -22,6 +22,23 @@ const layerStorage = ({ get, put }) => {
   return { getBlock, putBlock }
 }
 
+const limiter = (concurrency=100) => {
+  const promises = new Set()
+  const limit = async (p) => {
+    p.then(() => promises.delete(p))
+    promises.add(p)
+    while (promises.size > concurrency) {
+      await Promise.race([...promises])
+    }
+  }
+  limit.flush = async () => {
+    while (promises.size) {
+      await Promise.all([...promises])
+    }
+  }
+  return limit
+}
+
 class IPSQL {
   constructor ({ cid, get, put, db, cache }) {
     /* If this is bound to a storage interface never overwrite its storage methods */
@@ -53,12 +70,12 @@ class IPSQL {
     }
 
     let last
-    const promises = []
+    const limit = limiter()
     for await (const block of iter) {
-      promises.push(this.putBlock(block))
+      await limit(this.putBlock(block))
       last = block
     }
-    await Promise.all(promises)
+    await limit.flush()
     return this.constructor.from(last.cid, { ...this })
   }
 
