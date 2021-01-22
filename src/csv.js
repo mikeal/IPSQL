@@ -63,7 +63,7 @@ const main = ({ input, db, get, put, tableName, cache, chunker }) => {
             value = value.toString()
           }
           if (typeof value !== 'number' && (c.endsWith('INTEGER') || c.endsWith('FLOAT')) && value !== null) {
-            throw new Error(`Not a number ${ JSON.stringify(value) }`)
+            throw new Error(`Not a number ${JSON.stringify(value)}`)
           }
           if (value === 'NULL') value = null
 
