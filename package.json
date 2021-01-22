@@ -67,6 +67,7 @@
     "encrypted-block": "0.0.3",
     "get-port": "^5.1.1",
     "levelup": "^4.4.0",
+    "lru-cache": "^6.0.0",
     "multiformats": "^4.4.3",
     "papaparse": "^5.3.0",
     "public-ip": "^4.0.3",
