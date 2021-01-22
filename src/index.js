@@ -22,7 +22,7 @@ const layerStorage = ({ get, put }) => {
   return { getBlock, putBlock }
 }
 
-const limiter = (concurrency=100) => {
+const limiter = (concurrency = 100) => {
   const promises = new Set()
   const limit = async (p) => {
     p.then(() => promises.delete(p))
