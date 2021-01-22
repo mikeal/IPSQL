@@ -174,7 +174,17 @@ const fromURI = async (uri, put, store, key) => {
     // TODO: see if we can get rid of closes with socket.unref()
     close = () => remote.close()
   } else {
-    const { root, reader } = await getReader(uri)
+    let _reader
+    if (uri.endsWith('.cid')) {
+      const reader = await getStore({ store: uri })
+      _reader = { reader, root: reader.root }
+    } else if (uri.endsWith('.car')) {
+      _reader = await getReader(uri)
+    } else {
+      throw new Error('Not implemented: unknown uri')
+    }
+
+    const { root, reader } = _reader
 
     if (key) {
       if (typeof key === 'string') key = readFileSync(key)

@@ -1,6 +1,7 @@
 import KVStore from './kv.js'
 import { immutable } from '../utils.js'
 import s3client from '@aws-sdk/client-s3'
+import { CID } from 'multiformats'
 
 const {
   S3Client,
@@ -69,15 +70,29 @@ class S3Store extends KVStore {
 
   async _getKey (arr) {
     const Key = this.keyPrefix + arr.join('/')
-    const resp = await this.s3.getObject({ Key })
-    return resp.Body
+    const { Body } = await this.s3.getObject({ Key })
+    const buff = await new Promise((resolve, reject) => {
+      const parts = []
+      Body.on('error', reject)
+      Body.on('data', b => parts.push(b))
+      Body.on('end', () => resolve(Buffer.concat(parts)))
+    })
+    return buff
   }
 
   static getStore (url, config) {
     if (!(url instanceof URL)) url = new URL(url)
-    const { hostname: bucket, pathname: keyPrefix } = url
+    let { hostname: bucket, pathname: keyPrefix } = url
+    let root
+    if (keyPrefix.endsWith('.cid')) {
+      const i = keyPrefix.lastIndexOf('/')
+      let cid = keyPrefix.slice(i + 1)
+      keyPrefix = keyPrefix.slice(0, i)
+      cid = cid.slice(0, cid.length - '.cid'.length)
+      root = CID.parse(cid)
+    }
     const store = new S3Store({ bucket, keyPrefix, db: true })
-    return { get: store.get.bind(store), put: store.put.bind(store) }
+    return { get: store.get.bind(store), put: store.put.bind(store), root }
   }
 }
 
