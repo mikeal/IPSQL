@@ -6,25 +6,35 @@ const {
   S3Client,
   PutObjectCommand: PutObject,
   GetObjectCommand: GetObject,
-  HeadObjectCommand: HeadObject
+  HeadObjectCommand: HeadObject,
+  GetBucketLocationCommand: GetBucketLocation
 } = s3client
 
 class S3 {
   constructor ({ Bucket, region }) {
     this.Bucket = Bucket
-    this.client = new S3Client(region ? { region } : undefined)
+    if (!region) {
+      this.client = (new S3Client('us-west-2')).send(new GetBucketLocation({ Bucket })).then(region => {
+        return new S3Client(region)
+      })
+    } else {
+      this.client = new S3Client(region)
+    }
   }
 
-  putObject ({ Key, Body }) {
-    return this.client.send(new PutObject({ Key, Body, Bucket: this.Bucket }))
+  async putObject ({ Key, Body }) {
+    const client = await this.client
+    return client.send(new PutObject({ Key, Body, Bucket: this.Bucket }))
   }
 
-  headObject ({ Key }) {
-    return this.client.send(new HeadObject({ Key, Bucket: this.Bucket }))
+  async headObject ({ Key }) {
+    const client = await this.client
+    return client.send(new HeadObject({ Key, Bucket: this.Bucket }))
   }
 
-  getObject ({ Key }) {
-    return this.client.send(new GetObject({ Key, Bucket: this.Bucket }))
+  async getObject ({ Key }) {
+    const client = await this.client
+    return client.send(new GetObject({ Key, Bucket: this.Bucket }))
   }
 }
 
