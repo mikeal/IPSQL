@@ -19,7 +19,7 @@ class S3 {
         console.log({ region })
         return new S3Client({ region })
       }
-      this.client = (new S3Client('us-west-2')).send(new GetBucketLocation({ Bucket })).then(create)
+      this.client = (new S3Client({ region: 'us-west-2' })).send(new GetBucketLocation({ Bucket })).then(create)
     } else {
       console.log('explicit region', region)
       this.client = new S3Client({ region })
