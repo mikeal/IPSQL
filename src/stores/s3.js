@@ -2,39 +2,79 @@ import KVStore from './kv.js'
 import { immutable } from '../utils.js'
 import s3client from '@aws-sdk/client-s3'
 import { CID } from 'multiformats'
+import bent from 'bent'
 
 const {
   S3Client,
   PutObjectCommand: PutObject,
   GetObjectCommand: GetObject,
-  HeadObjectCommand: HeadObject,
-  GetBucketLocationCommand: GetBucketLocation
+  HeadObjectCommand: HeadObject
 } = s3client
 
 class S3 {
   constructor ({ Bucket, region }) {
     this.Bucket = Bucket
+    this.client = this.getClient({ Bucket, region })
+  }
+
+  async getClient ({ Bucket, region }) {
+    this.Bucket = Bucket
+    let client
     if (!region) {
-      const create = ({ LocationConstraint: region }) => new S3Client({ region })
-      this.client = (new S3Client({ region: 'us-west-2' })).send(new GetBucketLocation({ Bucket })).then(create)
-    } else {
-      this.client = new S3Client({ region })
+      const head = bent(`https://${Bucket}.s3.amazonaws.com`, 200, 403)
+      const resp = await head()
+      region = resp.headers['x-amz-bucket-region']
     }
+    client = new S3Client({ region })
+    try {
+      client = await client
+    } catch (e) {
+      client = null
+    }
+
+    if (client) {
+      try {
+        await client.config.credentials()
+      } catch (e) {
+        client = null
+      }
+    }
+
+    if (!client) {
+      const url = `https://${Bucket}.s3.${region}.amazonaws.com/`
+      this.httpGet = bent(url)
+      this.httpHead = bent(url, 'HEAD')
+      return null
+    }
+    return client
   }
 
   async putObject ({ Key, Body }) {
     const client = await this.client
+    if (!client) {
+      throw new Error('Client could not be constructed, credentials are likely missing, S3 is read-only.')
+    }
     return client.send(new PutObject({ Key, Body, Bucket: this.Bucket }))
   }
 
   async headObject ({ Key }) {
     const client = await this.client
-    return client.send(new HeadObject({ Key, Bucket: this.Bucket }))
+    if (client) {
+      return client.send(new HeadObject({ Key, Bucket: this.Bucket }))
+    } else {
+      const resp = await this.httpHead(Key)
+      return { 'Content-Length': resp.headers['content-length'] }
+    }
   }
 
   async getObject ({ Key }) {
     const client = await this.client
-    return client.send(new GetObject({ Key, Bucket: this.Bucket }))
+    if (client) {
+      return client.send(new GetObject({ Key, Bucket: this.Bucket }))
+    } else {
+      const resp = await this.httpGet(Key)
+      return { Body: resp }
+    }
   }
 }
 
