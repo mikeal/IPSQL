@@ -15,10 +15,10 @@ class S3 {
     this.Bucket = Bucket
     if (!region) {
       this.client = (new S3Client('us-west-2')).send(new GetBucketLocation({ Bucket })).then(region => {
-        return new S3Client(region)
+        return new S3Client({ region })
       })
     } else {
-      this.client = new S3Client(region)
+      this.client = new S3Client({ region })
     }
   }
 
