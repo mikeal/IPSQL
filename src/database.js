@@ -6,12 +6,11 @@ import { createTable, Table, Where } from './table.js'
 const { entries, fromEntries } = Object
 
 class Database extends SQLBase {
-  constructor ({ tables, get, cache, chunker, ...opts }) {
+  constructor ({ tables, get, cache, ...opts }) {
     super(opts)
     this.get = get
     this.cache = cache
     this.tables = tables
-    this.chunker = chunker
   }
 
   async cids () {
@@ -47,14 +46,14 @@ class Database extends SQLBase {
     return new Database({ tables: {}, ...opts })
   }
 
-  static async from (cid, { get, cache, chunker }) {
+  static async from (cid, { get, cache }) {
     const create = async (block) => {
       let { tables } = block.value
       const promises = entries(tables).map(async ([key, cid]) => {
-        return [key, await Table.from(cid, key, { get, cache, chunker })]
+        return [key, await Table.from(cid, key, { get, cache })]
       })
       tables = fromEntries(await Promise.all(promises))
-      return new Database({ tables, get, cache, block, chunker })
+      return new Database({ tables, get, cache, block })
     }
     return getNode(cid, get, cache, create)
   }
@@ -81,7 +80,11 @@ const notsupported = select => {
 }
 
 const runSelect = async function * (select, cids) {
-  for await (const { entry, table } of select.where(cids)) {
+  for await (const { entry, table, context } of select.where(cids)) {
+    if (context) {
+      yield { context }
+      continue
+    }
     cids.add({ address: entry.value })
     const result = await select.columns(entry, table)
     const _traverse = async row => {
@@ -89,7 +92,7 @@ const runSelect = async function * (select, cids) {
       return traverse(table.createRow({ block }).get(row.path))
     }
     const traverse = row => {
-      if (typeof row !== 'object') return row
+      if (!row || typeof row !== 'object' || Array.isArray(row)) return row
       return _traverse(row)
     }
     result.columns = await Promise.all(result.columns.map(traverse))
@@ -101,30 +104,51 @@ const { keys } = Object
 const { stringify } = JSON
 
 const runWhere = async function * (select, cids) {
-  const tables = select.ast.from.map(({ table }) => {
+  const tables = []
+  const context = {}
+  for (const obj of select.ast.from) {
+    const { table, ast, expr } = obj
+    if (expr) {
+      const results = await exec(expr.ast, { database: select.db })
+      if (!(results instanceof Select)) {
+        throw new Error('Not implemented, can only use WHERE with sub SELECT')
+      }
+      const all = await results.all(cids)
+      if (!obj.as) throw new Error('Not implemented, must use AS syntax in sub-queries')
+      context[obj.as] = all.result
+      continue
+    }
+    if (ast) {
+      console.log(ast)
+      throw new Error('Not Implemented')
+    }
     const _table = select.db.tables[table]
     if (!_table) {
       throw new Error(`No table named ${table}. Only ${stringify(keys(select.db.tables))}`)
     }
-    return _table
-  })
+    tables.push(_table)
+  }
   cids.add(select.db)
-  tables.forEach(t => cids.add(t))
-  if (select.ast.where === null) {
-    for (const table of tables) {
-      if (!table.rows) continue
-      const { result: iter } = await table.rows.getAllEntries(cids)
-      for (const entry of iter) {
-        yield { entry, table }
+  if (tables.length) {
+    tables.forEach(t => cids.add(t))
+    if (select.ast.where === null) {
+      for (const table of tables) {
+        if (!table.rows) continue
+        const { result: iter } = await table.rows.getAllEntries(cids)
+        for (const entry of iter) {
+          yield { entry, table }
+        }
+      }
+    } else {
+      for (const table of tables) {
+        if (!table.rows) continue
+        const w = new Where(select.db, select.ast.where, table)
+        const results = await w.all(cids)
+        yield * results.map(entry => ({ entry, table }))
       }
     }
   } else {
-    for (const table of tables) {
-      if (!table.rows) continue
-      const w = new Where(select.db, select.ast.where, table)
-      const results = await w.all(cids)
-      yield * results.map(entry => ({ entry, table }))
-    }
+    yield { context }
   }
 }
 
@@ -156,6 +180,7 @@ class Select {
     for await (const result of this.run(cids)) {
       results.push(result)
     }
+
     if (this.ast.orderby) {
       results = results.sort((a, b) => {
         for (const order of this.ast.orderby) {
@@ -176,12 +201,37 @@ class Select {
     const ret = data => full ? { result: data, cids } : data
 
     const _run = () => {
+      let context
+      for (const result of results) {
+        if (result.context) context = result.context
+      }
+      const localKeys = new Set(context ? Object.keys(context) : [])
       let data = results.map(r => r.columns)
       if (!this.ast.columns || this.ast.columns === '*') {
         return data
       } else {
-        if (this.ast.columns.length === 1 && this.ast.columns[0].expr.type === 'aggr_func') {
-          const { name } = this.ast.columns[0].expr
+        const expression = (ex, result) => {
+          const { name, type, value, operator } = ex
+          if (type === 'number') return Number(value)
+
+          if (type === 'binary_expr') {
+            const left = expression(ex.left)
+            const right = expression(ex.right)
+            if (operator === '+') {
+              return left + right
+            }
+          }
+
+          if (type === 'column_ref') {
+            if (ex.as) throw new Error('Not implemented')
+            const key = ex.column
+            if (localKeys.has(key)) {
+              return context[ex.column]
+            } else {
+              return result.row.get(key)
+            }
+          }
+
           if (name === 'COUNT') return data.length
           data = data.map(([i]) => i)
           if (name === 'MIN' || name === 'MAX') {
@@ -189,23 +239,49 @@ class Select {
             if (name === 'MIN') return data[0]
             if (name === 'MAX') return data[data.length - 1]
           }
-          const reduced = data.reduce((a, b) => a + b)
+          const reduced = data.reduce((a, b) => a + b, 0)
           if (name === 'SUM') return reduced
           if (name === 'AVG') return reduced / data.length
           throw new Error('Not Implemented')
         }
-        for (const col of this.ast.columns) {
-          const { type } = col.expr
-          if (type !== 'column_ref') throw new Error('Not Implemented')
+
+        // fast path for single aggregation expression
+        if (this.ast.columns.length === 1 && this.ast.columns[0].expr.type === 'aggr_func') {
+          return expression(this.ast.columns[0].expr)
         }
-        return data
+
+        // fast path for all column refs
+        if (!context && this.ast.columns.filter(({ expr: { type } }) => type !== 'column_ref').length === 0) {
+          return data
+        }
+
+        if (this.ast.columns.length > 1) {
+          throw new Error('Not implemented, cannot do complex column expressions over many rows')
+        }
+
+        const { expr: { type } } = this.ast.columns[0]
+        if (this.ast.columns.length === 1 && (type === 'aggr_func' || type === 'binary_expr')) {
+          return expression(this.ast.columns[0].expr)
+        }
+
+        const ret = []
+        for (const result of results) {
+          const line = []
+          for (const col of this.ast.columns) {
+            const { expr, as } = col
+            if (as) throw new Error('Not Implemented')
+            line.push(expression(expr, result))
+          }
+          ret.push(line)
+        }
+        return ret
       }
     }
     return ret(_run())
   }
 }
 
-const exec = (ast, { database, chunker }) => {
+const exec = (ast, { database }) => {
   const { keyword, type } = ast
   if (keyword === 'table') {
     if (type === 'create') {
@@ -220,7 +296,7 @@ const exec = (ast, { database, chunker }) => {
     if (db !== null) throw new Error('Not implemented')
     const table = database.tables[name]
     if (!table) throw new Error(`Missing table '${name}'`)
-    return table.insert(ast, { database, chunker })
+    return table.insert(ast, { database })
   }
   if (type === 'select') {
     return new Select(database, ast)
