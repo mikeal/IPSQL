@@ -14,7 +14,9 @@ class S3 {
   constructor ({ Bucket, region }) {
     this.Bucket = Bucket
     if (!region) {
+      console.log(1, { region })
       this.client = (new S3Client('us-west-2')).send(new GetBucketLocation({ Bucket })).then(region => {
+        console.log({ region })
         return new S3Client({ region })
       })
     } else {
