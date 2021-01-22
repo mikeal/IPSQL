@@ -12,11 +12,16 @@ const {
 
 class S3 {
   constructor ({ Bucket, region }) {
+    console.log('create s3')
     this.Bucket = Bucket
     if (!region) {
-      const create = ({ LocationConstraint: region }) => new S3Client({ region })
+      const create = ({ LocationConstraint: region }) => {
+        console.log({ region })
+        return new S3Client({ region })
+      }
       this.client = (new S3Client('us-west-2')).send(new GetBucketLocation({ Bucket })).then(create)
     } else {
+      console.log('explicit region', region)
       this.client = new S3Client({ region })
     }
   }
