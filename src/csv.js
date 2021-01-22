@@ -56,16 +56,19 @@ const main = ({ input, db, get, put, tableName, cache, chunker }) => {
         const ret = []
         const _columns = [...columns]
         for (const column of meta.fields) {
+          if (skips.has(column)) continue
           let value = row[column]
           const c = _columns.shift()
           if (typeof value === 'number' && !c.endsWith('INTEGER') && !c.endsWith('FLOAT')) {
             value = value.toString()
           }
-          if (value === 'NULL') value = null
-          if (!skips.has(column)) {
-            if (value === null) ret.push('NULL')
-            else ret.push(JSON.stringify(value))
+          if (typeof value !== 'number' && (c.endsWith('INTEGER') || c.endsWith('FLOAT')) && value !== null) {
+            throw new Error(`Not a number ${ JSON.stringify(value) }`)
           }
+          if (value === 'NULL') value = null
+
+          if (value === null) ret.push('NULL')
+          else ret.push(JSON.stringify(value))
         }
         return `( ${ret.join(', ')} )`
       }).join(', ')}`
