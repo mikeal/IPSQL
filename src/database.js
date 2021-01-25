@@ -282,6 +282,7 @@ class Select {
 }
 
 const exec = (ast, { database }) => {
+  if (ast.columns) console.log(ast.columns[0])
   const { keyword, type } = ast
   if (keyword === 'table') {
     if (type === 'create') {

@@ -47,7 +47,7 @@ describe('select', () => {
     same(all, [[10]])
   })
 
-  it('FROM sub-select', async () => {
+  it('FROM sub-select with addition', async () => {
     let ipsql = await create('CREATE TABLE Test (id int)')
     const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     ipsql = await ipsql.write(`INSERT INTO Test VALUES ${values.map(s => '(' + s + ')').join(', ')}`)
@@ -57,5 +57,16 @@ describe('select', () => {
 
     all = await ipsql.read('SELECT C + 2 from ( SELECT COUNT(id) + 2 FROM Test )C')
     same(all, 14)
+  })
+
+  it('FROM double sub-select', async () => {
+    let ipsql = await create('CREATE TABLE Test (id int)')
+    const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    ipsql = await ipsql.write(`INSERT INTO Test VALUES ${values.map(s => '(' + s + ')').join(', ')}`)
+    ipsql = await ipsql.write('CREATE TABLE Test2 (id int)')
+    ipsql = await ipsql.write(`INSERT INTO Test2 VALUES ${values.map(s => '(' + s + ')').join(', ')}`)
+
+    let all = await ipsql.read('SELECT C.one + C.two from ( SELECT (SELECT COUNT(id) AS one FROM Test), (Select COUNT(id) AS two FROM Test2))C')
+    console.log(all)
   })
 })
