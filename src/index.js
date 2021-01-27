@@ -41,6 +41,7 @@ const limiter = (concurrency = 100) => {
 
 class IPSQL {
   constructor ({ cid, get, put, cache }) {
+    if (!cache) throw new Error('missing cache')
     /* If this is bound to a storage interface never overwrite its storage methods */
     if (this.get) get = this.get.bind(this)
     if (this.put) put = this.put.bind(this)
@@ -104,24 +105,30 @@ class IPSQL {
     return data
   }
 
-  static async transaction (trans, opts) {
+  async transaction (trans) {
     // get the transaction into a block
     if (trans.asCID === trans) {
-      const ipsql = new this({ ...opts, cid: 'headless' })
-      opts = { ...ipsql }
-      trans = await ipsql.getBlock(trans)
+      trans = await this.getBlock(trans)
     }
     if (trans.asBlock !== trans) {
-      const ipsql = new this({ ...opts, cid: 'headless' })
+      if (typeof trans === 'string') {
+        trans = { sql: trans, db: this.cid ? this.cid : null }
+      }
       trans = await encode(trans)
-      await ipsql.put(trans)
+      await this.putBlock(trans)
     }
     const { sql, db: cid } = trans.value
 
-    const ipsql = new this({ ...opts, cid })
-    const db = await ipsql.db
+    let db
+    if (cid) {
+      if (cid.equals(this.cid)) db = await this.db
+      else db = await Database.from(cid, { ...this, get: this.getBlock, put: this.putBlock })
+    } else if (cid === null) {
+      db = await Database.create({ ...this, get: this.getBlock, put: this.putBlock })
+    } else {
+      throw new Error('Invalid CID in transaction input')
+    }
     const results = await db.sql(sql)
-
     /* right now this code splits from reads vs writes which won't work for all
      * sql statements since there are statements that both read and write.
      * this will all get normalized in a future refactor of the sql engine.
@@ -137,22 +144,26 @@ class IPSQL {
           if (column.index) data.cids.add(column.index)
         }
       }
-      await data.cids.all()
-      console.log(data)
-      throw new Error('here')
+      const reads = [...await data.cids.all()].map(str => CID.parse(str))
+      const result = await encode(data.result)
+      await this.putBlock(result)
+      const block = await encode({ result: result.cid, reads, writes: [result.cid] })
+      return block
     } else {
       // writer
       let last
       const limit = limiter()
       const writes = new Map()
       for await (const block of results) {
-        await limit(ipsql.putBlock(block))
+        await limit(this.putBlock(block))
         writes.set(block.cid.toString(), block.cid)
         last = block
       }
       await limit.flush()
       const db = last.cid
-      const block = await encode({ input: trans.cid, db, writes: [...writes.values()] })
+      const writesBlock = await encode([...writes.values()])
+      const block = await encode({ input: trans.cid, db, writes: writesBlock.cid })
+      await this.putBlock(block)
       return block
     }
   }
@@ -172,5 +183,7 @@ class IPSQL {
     return db
   }
 }
+
+IPSQL.defaults = defaults
 
 export default IPSQL
