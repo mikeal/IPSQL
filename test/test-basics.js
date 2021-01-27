@@ -8,7 +8,7 @@ import InMemory from '../src/stores/inmemory.js'
 import { create, same } from './lib.js'
 
 const storage = () => {
-  const store = new InMemory({ db: true })
+  const store = new InMemory({ cid: 'headless' })
   const get = store.get.bind(store)
   const put = store.put.bind(store)
   return { store, get, put }

@@ -1,4 +1,5 @@
 import IPSQLStore from './base.js'
+import { immutable } from '../utils.js'
 
 class Missing extends Error {
   get statusCode () {
@@ -9,11 +10,7 @@ class Missing extends Error {
 class InMemory extends IPSQLStore {
   constructor (opts) {
     super(opts)
-    Object.defineProperty(this, 'storage', {
-      value: opts.storage || new Map(),
-      writable: false,
-      enumerable: true
-    })
+    immutable(this, { storage: opts.storage || new Map() })
   }
 
   async put (block) {

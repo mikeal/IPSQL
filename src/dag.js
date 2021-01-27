@@ -60,7 +60,8 @@ class DAGAPI {
   }
 
   async get (name, i, full) {
-    const table = this.ipsql.db.tables[name]
+    const db = await this.ipsql.db
+    const table = db.tables[name]
     if (!table) throw new Error(`No table named ${name}`)
     const { result, cids } = await table.get(i, this.ipsql.getBlock)
     if (full) return { result, cids }
@@ -73,7 +74,8 @@ class DAGAPI {
   }
 
   async * write ({ create, insert }) {
-    const { getBlock: get, db } = this.ipsql
+    let { getBlock: get, db } = this.ipsql
+    db = await db
     const { chunker, cache } = db
     if (create) {
       const { name, columns: columnString } = create
@@ -98,7 +100,8 @@ class DAGAPI {
     }
     if (insert) {
       const { name, inserts } = insert
-      const table = this.ipsql.db.tables[name]
+      const db = await this.ipsql.db
+      const table = db.tables[name]
       if (!table) throw new Error(`No table named ${name}`)
       const _inserts = []
       for await (const insert of inserts) {
@@ -116,7 +119,7 @@ class DAGAPI {
         _inserts.push({ block, row: new DAGRow({ block, table }) })
       }
       const opts = { chunker, get, cache, ...mf }
-      yield * table._insert({ opts, table, get, cache, inserts: _inserts, database: this.ipsql.db })
+      yield * table._insert({ opts, table, get, cache, inserts: _inserts, database: db })
       return
     }
     throw new Error('Not implemented')

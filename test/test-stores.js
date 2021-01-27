@@ -38,7 +38,7 @@ describe('stores', () => {
           same(all, [[10, 'a']])
           all = await ipsql.read('SELECT * FROM Test WHERE String = \'a\'')
           same(all, [[10, 'a'], [11, 'a']])
-          cid = ipsql.db.block.cid
+          cid = (await ipsql.db).block.cid
           same(!!(await ipsql.has(cid)), true)
         })
         it('not found', async () => {

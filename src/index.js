@@ -2,7 +2,7 @@ import { CID } from 'multiformats'
 import { Database } from './database.js'
 import { nocache } from 'chunky-trees/cache'
 import { DAGAPI } from './dag.js'
-import { immutable } from './utils.js'
+import { immutable, encode } from './utils.js'
 
 const defaults = { cache: nocache }
 const cache = new WeakMap()
@@ -40,13 +40,16 @@ const limiter = (concurrency = 100) => {
 }
 
 class IPSQL {
-  constructor ({ cid, get, put, db, cache }) {
+  constructor ({ cid, get, put, cache }) {
     /* If this is bound to a storage interface never overwrite its storage methods */
     if (this.get) get = this.get.bind(this)
     if (this.put) put = this.put.bind(this)
-    if (!db) throw new Error('Missing required argument')
+    if (!cid) throw new Error('Missing required argument')
     const dt = new DAGAPI(this)
-    const props = { cid, db, dt, get, put, ...layerStorage({ get, put }), cache }
+    const props = { cid, dt, get, put, ...layerStorage({ get, put }), cache }
+    if (cid !== 'headless') {
+      props.db = Database.from(cid, { ...props, get: props.getBlock, put: props.putBlock })
+    }
     immutable(this, props)
   }
 
@@ -59,6 +62,7 @@ class IPSQL {
   }
 
   async write (q) {
+    const db = await this.db
     let iter
     if (typeof q === 'object') {
       if (q.dt) iter = this.dt.write(q.dt)
@@ -66,7 +70,7 @@ class IPSQL {
         throw new Error('Don\'t understand query')
       }
     } else {
-      iter = this.db.sql(q)
+      iter = db.sql(q)
     }
 
     let last
@@ -80,13 +84,14 @@ class IPSQL {
   }
 
   async read (q, full) {
-    const result = this.db.sql(q)
+    const db = await this.db
+    const result = db.sql(q)
     const data = await result.all(full)
     if (full) {
       /* This should eventually be factored out to reduce export
        * size https://github.com/mikeal/IPSQL/issues/2
        */
-      for (const table of Object.values(this.db.tables)) {
+      for (const table of Object.values(db.tables)) {
         data.cids.add(table)
         if (table.rows) data.cids.add(table.rows)
         for (const column of table.columns) {
@@ -99,17 +104,72 @@ class IPSQL {
     return data
   }
 
+  static async transaction (trans, opts) {
+    // get the transaction into a block
+    if (trans.asCID === trans) {
+      const ipsql = new this({ ...opts, cid: 'headless' })
+      opts = { ...ipsql }
+      trans = await ipsql.getBlock(trans)
+    }
+    if (trans.asBlock !== trans) {
+      const ipsql = new this({ ...opts, cid: 'headless' })
+      trans = await encode(trans)
+      await ipsql.put(trans)
+    }
+    const { sql, db: cid } = trans.value
+
+    const ipsql = new this({ ...opts, cid })
+    const db = await ipsql.db
+    const results = await db.sql(sql)
+
+    /* right now this code splits from reads vs writes which won't work for all
+     * sql statements since there are statements that both read and write.
+     * this will all get normalized in a future refactor of the sql engine.
+     */
+    if (results.all) {
+      // read-only
+      const data = await results.all(true)
+      for (const table of Object.values(db.tables)) {
+        data.cids.add(table)
+        if (table.rows) data.cids.add(table.rows)
+        for (const column of table.columns) {
+          data.cids.add(column)
+          if (column.index) data.cids.add(column.index)
+        }
+      }
+      await data.cids.all()
+      console.log(data)
+      throw new Error('here')
+    } else {
+      // writer
+      let last
+      const limit = limiter()
+      const writes = new Map()
+      for await (const block of results) {
+        await limit(ipsql.putBlock(block))
+        writes.set(block.cid.toString(), block.cid)
+        last = block
+      }
+      await limit.flush()
+      const db = last.cid
+      const block = await encode({ input: trans.cid, db, writes: [...writes.values()] })
+      return block
+    }
+  }
+
   static create (q, { ...opts } = {}) {
     opts.cache = opts.cache || defaults.cache
-    const db = new this({ ...opts, db: Database.create(opts) })
+    const db = new this({ ...opts, cid: 'headless' })
+    db.db = Database.create({ ...db })
     return db.write(q)
   }
 
   static async from (cid, { ...opts } = {}) {
     if (typeof cid === 'string') cid = CID.parse(cid)
     opts.cache = opts.cache || defaults.cache
-    const db = await Database.from(cid, opts)
-    return new this({ ...opts, db, cid })
+    const db = new this({ ...opts, cid })
+    await db.db
+    return db
   }
 }
 

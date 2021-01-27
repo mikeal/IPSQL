@@ -131,7 +131,7 @@ class S3Store extends KVStore {
       cid = cid.slice(0, cid.length - '.cid'.length)
       root = CID.parse(cid)
     }
-    const store = new S3Store({ bucket, keyPrefix, db: true })
+    const store = new S3Store({ bucket, keyPrefix, db: 'headless' })
     return { get: store.get.bind(store), put: store.put.bind(store), root }
   }
 }

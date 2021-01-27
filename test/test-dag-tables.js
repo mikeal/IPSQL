@@ -36,7 +36,8 @@ describe('dag tables', () => {
     const opts = mkopts()
     const query = { dt: { create: { name: 'test', columns: 'firstname VARCHAR(255)' } } }
     const ipsql = await IPSQL.create(query, opts)
-    same(ipsql.db.tables.test.name, 'test')
+    const db = await ipsql.db
+    same(db.tables.test.name, 'test')
   })
   it('insert (no index match)', async () => {
     let ipsql = await create('test', 'firstname VARCHAR(255)')
@@ -45,9 +46,10 @@ describe('dag tables', () => {
     ipsql = await ipsql.dt.insert('test', hello)
     const ret = await ipsql.dt.get('test', 1)
     same(ret, hello)
-    same(ipsql.db.tables.test.name, 'test')
+    const db = await ipsql.db
+    same(db.tables.test.name, 'test')
 
-    const column = ipsql.db.tables.test.columns[0]
+    const column = db.tables.test.columns[0]
     same(column.index, null)
   })
 
@@ -59,19 +61,21 @@ describe('dag tables', () => {
     ipsql = await ipsql.dt.insert('test', hello)
     let ret = await ipsql.dt.get('test', 1)
     same(ret, hello)
-    same(ipsql.db.tables.test.name, 'test')
+    let db = await ipsql.db
+    same(db.tables.test.name, 'test')
 
-    let column = ipsql.db.tables.test.columns[0]
+    let column = db.tables.test.columns[0]
     same(column.index, null)
 
     ipsql = await ipsql.dt.insert('test', hello)
+    db = await ipsql.db
     ret = await ipsql.dt.get('test', 1)
     same(ret, hello)
     ret = await ipsql.dt.get('test', 2)
     same(ret, hello)
-    same(ipsql.db.tables.test.name, 'test')
+    same(db.tables.test.name, 'test')
 
-    column = ipsql.db.tables.test.columns[0]
+    column = db.tables.test.columns[0]
     same(column.index, null)
   })
 
@@ -82,7 +86,8 @@ describe('dag tables', () => {
     ipsql = await ipsql.dt.insert('test', hello)
     const ret = await ipsql.dt.get('test', 1)
     same(ret, hello)
-    same(ipsql.db.tables.test.name, 'test')
+    const db = await ipsql.db
+    same(db.tables.test.name, 'test')
 
     const results = await ipsql.read('SELECT firstname FROM test WHERE firstname = "hello"')
     same(results, [['hello']])
@@ -95,7 +100,8 @@ describe('dag tables', () => {
     ipsql = await ipsql.dt.insert('test', hello)
     const ret = await ipsql.dt.get('test', 1)
     same(ret, hello)
-    same(ipsql.db.tables.test.name, 'test')
+    const db = await ipsql.db
+    same(db.tables.test.name, 'test')
 
     let results = await ipsql.read('SELECT firstname FROM test WHERE firstname = "hello"')
     same(results, [['hello']])
