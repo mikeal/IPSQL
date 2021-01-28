@@ -4,11 +4,12 @@ import { nocache } from 'chunky-trees/cache'
 import { SparseArrayLeaf } from 'chunky-trees/sparse-array'
 import { DBIndexLeaf, DBIndexBranch } from 'chunky-trees/db-index'
 import InMemory from '../src/stores/inmemory.js'
+import IPSQL from '../src/index.js'
 
 import { create, same } from './lib.js'
 
 const storage = () => {
-  const store = new InMemory({ cid: 'headless' })
+  const store = new InMemory({ cid: 'headless', cache: IPSQL.defaults.cache })
   const get = store.get.bind(store)
   const put = store.put.bind(store)
   return { store, get, put }

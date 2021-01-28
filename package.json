@@ -14,9 +14,8 @@
     "lint": "standard",
     "test:cjs": "npm run build && mocha dist/cjs/node-test/test-*.js",
     "test:node": "mocha test/test-*.js",
-    "test": "standard && npm run test:node",
-    "test:node-v12": "mocha test/test-*.js && npm run test:cjs",
-    "test:node-v14": "npm run test:node-v12",
+    "test:cjs:browser": "polendina --cleanup dist/cjs/browser-test/test-*.js",
+    "test": "npm run lint && npm run test:node && npm run test:cjs && npm run test:cjs:browser",
     "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080"
   },
   "keywords": [],
@@ -52,6 +51,7 @@
     "hundreds": "0.0.9",
     "memdown": "^5.1.0",
     "mocha": "^8.2.1",
+    "polendina": "^1.1.0",
     "standard": "^16.0.3"
   },
   "dependencies": {
