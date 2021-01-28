@@ -9,7 +9,7 @@ const create = async sql => {
 
 describe('transactions', () => {
   it('create table', async () => {
-    let { trans, ipsql } = await create(`
+    const { trans, ipsql } = await create(`
       CREATE TABLE test ( id int, name varchar(255) )
     `)
     same(!!trans.value.db, true)
@@ -28,10 +28,10 @@ describe('transactions', () => {
     })
     ipsql = await IPSQL.from(trans.value.db, ipsql)
     let res = await ipsql.read('SELECT * from test')
-    same([ [ 5, 'test' ] ], res)
+    same([[5, 'test']], res)
 
     trans = await ipsql.transaction('SELECT * from test')
     res = await ipsql.getBlock(trans.value.result)
-    same([ [ 5, 'test' ] ], res.value)
+    same([[5, 'test']], res.value)
   })
 })
