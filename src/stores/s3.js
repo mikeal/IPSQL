@@ -1,4 +1,5 @@
 import KVStore from './kv.js'
+import IPSQL from '../index.js'
 import { immutable } from '../utils.js'
 import s3client from '@aws-sdk/client-s3'
 import { CID } from 'multiformats'
@@ -120,7 +121,7 @@ class S3Store extends KVStore {
     return buff
   }
 
-  static getStore (url, config) {
+  static getStore (url, config, cache = IPSQL.defaults.cache) {
     if (!(url instanceof URL)) url = new URL(url)
     let { hostname: bucket, pathname: keyPrefix } = url
     let root
@@ -131,7 +132,7 @@ class S3Store extends KVStore {
       cid = cid.slice(0, cid.length - '.cid'.length)
       root = CID.parse(cid)
     }
-    const store = new S3Store({ bucket, keyPrefix, db: 'headless' })
+    const store = new S3Store({ bucket, keyPrefix, cid: 'headless', cache })
     return { get: store.get.bind(store), put: store.put.bind(store), root }
   }
 }

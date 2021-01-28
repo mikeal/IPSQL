@@ -11,6 +11,7 @@
     "build": "npm_config_yes=true npx ipjs@latest build --tests && npm run build:bin",
     "publish": "npm_config_yes=true npx ipjs@latest publish",
     "build:bin": "cp -R cli/bin.js dist/esm/cli/bin.js",
+    "build:components": "cd components && npm install && npm build",
     "lint": "standard",
     "test:cjs": "npm run build && mocha dist/cjs/node-test/test-*.js",
     "test:node": "mocha test/test-*.js",

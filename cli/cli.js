@@ -8,7 +8,6 @@ import { Database } from 'ipsql/database'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import { CID } from 'multiformats'
-import { bf } from 'chunky-trees/utils'
 import { Readable } from 'stream'
 import getPort from 'get-port'
 import publicIP from 'public-ip'
@@ -17,15 +16,12 @@ import { CarReader, CarWriter } from '@ipld/car'
 import bent from 'bent'
 import { randomBytes } from 'crypto'
 import { writeFileSync, readFileSync, createReadStream, createWriteStream } from 'fs'
-import { sha256 as hasher } from 'multiformats/hashes/sha2'
 import { encrypt, decrypt } from './crypto.js'
 import S3 from '../src/stores/s3.js'
 
 const httpGet = bent({ 'user-agent': 'ipsql-v0' })
 const httpGetString = bent('string', { 'user-agent': 'ipsql-v0' })
 const isHttpUrl = str => str.startsWith('http://') || str.startsWith('https://')
-
-const chunker = bf(256)
 
 const stack = (...gets) => async (...args) => {
   for (const get of gets) {
@@ -71,7 +67,7 @@ const queryOptions = yargs => {
   })
 }
 
-const mkopts = argv => ({ cache: cache(), chunker, hasher })
+const mkopts = argv => ({ cache: cache() })
 
 const inmem = () => {
   const store = {}
