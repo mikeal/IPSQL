@@ -54,8 +54,9 @@ class IPSQL {
     immutable(this, props)
   }
 
-  cids () {
-    return this.db.cids()
+  async cids () {
+    const db = await this.db
+    return db.cids()
   }
 
   get id () {
