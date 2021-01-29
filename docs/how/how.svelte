@@ -11,6 +11,7 @@
 
 <how>
   <h1>How does IPSQL work?</h1>
+  <h3>Proof of SQL</h3>
   <p>IPSQL is quite different from traditional databases.</p>
   <p>A typical database will write to a file on a server you're running it on. But
   that doesn't work so well for building distributed systems.</p>
@@ -26,16 +27,16 @@
   <p>A <strong>SQL proof</strong> describes
   <ul>
     <li>the <strong>result</strong> of the SQL statement (if there is one, there won't be for most writes),</li>
-    <li>a <a href="https://en.wikipedia.org/wiki/Set_(abstract_data_type)">Set</a> of hash addresses that must be <strong>read</strong> to perform the proof,</li>
-    <li>a Set of <strong>new</strong> hash addresses written by the proof,</li>
-    <li>and the hash address of the database after performing the proof.</li>
+    <li>a <a href="https://en.wikipedia.org/wiki/Set_(abstract_data_type)">Set</a> of hash addresses that must be <strong>read</strong> to perform the statement,</li>
+    <li>a Set of <strong>new</strong> hash addresses written by the statement,</li>
+    <li>and the hash address of the database <strong>after</strong> executing the statement.</li>
   </ul>
   <p>Rather than just returning the desired query result, we also know the block addresses required to verify
   the proof. This means we can have untrusted parties hold the large amounts of data necessary to perform
   arbitrary SQL queries. We then only need this small fraction of the database to verify the proof.
   </p>
-  <p>We can also query databases and store their results in cache or offline.
-  When the database changes in the future we can ask for a new proof of the same query. If the hashe of the
+  <p>We can also query databases and store their results in cache and offline.
+  When the database changes in the future we can ask for a new proof of the same query. If the hash of the
   read set has not changed then our query has not changed. If it has changed, or if we want to verify the proof,
   we can ask for the <strong>delta</strong> of blocks between the old proof and the new one.
   </p>
