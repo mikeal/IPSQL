@@ -17,7 +17,7 @@
   <p>IPSQL produces <a href="https://specs.ipld.io/block-layer/block.html"><strong>blocks</strong></a>, which are just blobs of binary data
   that are then referenced by <a href="https://specs.ipld.io/block-layer/CID.html"><strong>hash address</strong></a>.</p>
   <p>This means that you can store IPSQL data anywhere. File systems, <a href="https://aws.amazon.com">S3</a>, <a href="https://specs.ipld.io/block-layer/content-addressable-archives.html">export files</a>, <a href="https://en.wikipedia.org/wiki/Content_delivery_network">CDN</a>, <a href="https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API">browser local storage</a>,
-  p2p networks (<a href="https://ipfs.io">IPFS</a>), blockchains (<a href="https://filecoin.io">Filecoin</a>), call all be used to store and provide access to IPSQL databases. In fact, you can use any <strong>combination</strong> of these storage systems layered as you see fit.</p>
+  p2p networks (<a href="https://ipfs.io">IPFS</a>), blockchains (<a href="https://filecoin.io">Filecoin</a>), can all be used to store and provide access to IPSQL databases. In fact, you can use any <strong>combination</strong> of these storage systems layered as you see fit.</p>
   <p>Since data is addressed by a <a href="https://en.wikipedia.org/wiki/Cryptographic_hash_function">cryptographic hash</a> we don't even need to trust the data provider since
   we can verify any data sent matches the hash in the address.</p>
   <p>Traditional SQL databases write "pages" to file formats on disc for each transaction. This gives you a guarantee when the transaction returns the data is safely on disc. These pages accumulate as you add
