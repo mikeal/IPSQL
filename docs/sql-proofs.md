@@ -4,14 +4,14 @@ SQL Proofs are immutable hash linked data structures for transactions
 in a decentralized system.
 
 They are a primitive we can use to build an efficient ACID compliant database
-that supports all of SQL along with any number of further extensions.
+that supports all of SQL along with any number of extensions.
 
 ## Basics
 
 A SQL Proof is a functional transform from one hash link graph to another.
 The same version of the proof engine will always produce the same output given the same input and since the input is immutable the output is fully deterministic.
 
-For hash addreses we use a `CID`, which is an efficient binary address format for any
+For hash addreses we use a [`CID`](https://specs.ipld.io/block-layer/CID.html), which is an efficient binary address format for any
 hash algorithm and data format.
 
 ```js
@@ -41,7 +41,7 @@ A few things to note before we move on:
   outside of the `CIDSet()s` to flush the transaction to disc, transfer it between nodes or processes,
   cache it in memory or locally for offline reads, etc.
 
-A write transaction in any database creates a data structure that can persisted and
+A write transaction in any database creates a data structure that can be persisted and
 queried later on. In this, it reduces the computation and IO necessary to perform the intended
 search operations.
 
