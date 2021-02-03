@@ -1,5 +1,6 @@
 /* globals describe, it */
 import IPSQL from '../src/stores/inmemory.js'
+import { encode } from '../src/utils.js'
 import { deepStrictEqual as same } from 'assert'
 
 const create = async sql => {
@@ -8,6 +9,13 @@ const create = async sql => {
 }
 
 describe('transactions', () => {
+  it('create w/ block', async () => {
+    const ipsql = new IPSQL({ cid: 'headless', cache: IPSQL.defaults.cache })
+    const sql = 'CREATE TABLE test (id int)'
+    const block = await encode({ sql, db: null })
+    const proof = await ipsql.transaction(block)
+    same(Object.keys(proof.value), ['input', 'db', 'writes'])
+  })
   it('create table', async () => {
     const { trans, ipsql } = await create(`
       CREATE TABLE test ( id int, name varchar(255) )

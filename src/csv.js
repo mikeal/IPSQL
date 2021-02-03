@@ -39,7 +39,7 @@ const main = ({ input, db, get, put, tableName, cache, chunker }) => {
         if (!types[column]) skips.add(column)
       }
       let sql = `CREATE TABLE \`${tableName}\` (\n${columns.map(c => '  ' + c).join(',\n')}\n)`
-      console.log(sql)
+      console.error(sql)
       let db = await IPSQL.create(sql, { get, put, chunker, cache })
 
       // hack: this fixes an apparent bug in papaparse

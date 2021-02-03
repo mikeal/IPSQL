@@ -1,3 +1,4 @@
+import IPSQL from '../index.js'
 import IPSQLStore from './base.js'
 import { immutable } from '../utils.js'
 
@@ -26,6 +27,10 @@ class InMemory extends IPSQLStore {
     const value = this.storage.get(key)
     if (!value) throw new Missing(`Do not have ${key} in store`)
     return value
+  }
+
+  static headless () {
+    return new InMemory({ cid: 'headless', cache: IPSQL.defaults.cache })
   }
 }
 

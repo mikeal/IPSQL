@@ -117,6 +117,7 @@ class Row {
     let obj = this.toObject()
     for (const change of ast.set) {
       const schema = this.props.find(c => c.column.column === change.column)
+      if (!schema) throw new Error(`No column named ${change.column}`)
       validate(schema, change.value)
       obj[change.column] = change.value.value
     }
@@ -267,6 +268,7 @@ const tableInsert = async function * (table, ast, { database }) {
       if (type !== 'expr_list') throw new Error('Not implemented')
       for (let i = 0; i < value.length; i++) {
         const schema = schemas[i]
+        if (!schema) throw new Error('Incorrect number of values, does not match columns in schema')
         let val = value[i]
         if (val.type === 'unary_expr' && val.operator === '-') {
           val = { type: 'number', value: -val.expr.value }

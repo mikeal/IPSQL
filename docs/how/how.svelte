@@ -5,12 +5,17 @@
 
 <style>
   how {
+    display: grid;
+    padding: 1%;
     font-size: 150%;
+  }
+  how * {
+    padding: 2%;
   }
 </style>
 
 <how>
-  <h1>How does IPSQL work?</h1>
+  <h2>How does IPSQL work?</h2>
   <h3>Proof of SQL</h3>
   <p>IPSQL is quite different from traditional databases.</p>
   <p>A typical database will write to a file on a server you're running it on. But

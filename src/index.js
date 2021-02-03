@@ -129,6 +129,7 @@ class IPSQL {
     } else {
       throw new Error('Invalid CID in transaction input')
     }
+    console.log({ db, sql, cid })
     const results = await db.sql(sql)
     /* right now this code splits from reads vs writes which won't work for all
      * sql statements since there are statements that both read and write.
@@ -148,7 +149,7 @@ class IPSQL {
       const reads = [...await data.cids.all()].map(str => CID.parse(str))
       const result = await encode(data.result)
       await this.putBlock(result)
-      const block = await encode({ result: result.cid, reads, writes: [result.cid] })
+      const block = await encode({ result: result.cid, db: await db.address, reads, writes: [result.cid] })
       return block
     } else {
       // writer

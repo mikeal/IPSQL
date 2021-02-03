@@ -353,7 +353,7 @@ const runImportExport = async (argv) => {
   } else if (argv.output.startsWith('s3://')) {
     let { hostname, pathname } = new URL(argv.output)
     if (pathname.length && !pathname.endsWith('/')) pathname += '/'
-    console.log(`s3://${hostname}/${pathname}${db.id}.cid`)
+    process.stdout.write(`s3://${hostname}/${pathname}${db.id}.cid`)
   } else {
     throw new Error('Not implemented')
   }

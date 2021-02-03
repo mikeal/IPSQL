@@ -4,7 +4,7 @@ import { encoder as encode, decoder as decode, create, mf } from './block.js'
 
 const createBlock = (bytes, cid) => create({ bytes, cid })
 
-const immediate = () => new Promise(resolve => setImmediate(resolve))
+const immediate = () => new Promise(resolve => setTimeout(resolve, 0))
 
 const getNode = async (cid, get, cache, create) => {
   if (cache.has(cid)) {
