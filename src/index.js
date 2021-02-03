@@ -129,7 +129,7 @@ class IPSQL {
     } else {
       throw new Error('Invalid CID in transaction input')
     }
-    console.log({ db, sql, cid })
+
     const results = await db.sql(sql)
     /* right now this code splits from reads vs writes which won't work for all
      * sql statements since there are statements that both read and write.
