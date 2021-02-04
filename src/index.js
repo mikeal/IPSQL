@@ -150,6 +150,7 @@ class IPSQL {
       const result = await encode(data.result)
       await this.putBlock(result)
       const block = await encode({ result: result.cid, db: await db.address, reads, writes: [result.cid] })
+      await this.putBlock(block)
       return block
     } else {
       // writer
@@ -164,6 +165,7 @@ class IPSQL {
       await limit.flush()
       const db = last.cid
       const writesBlock = await encode([...writes.values()])
+      this.putBlock(writesBlock)
       const block = await encode({ input: trans.cid, db, writes: writesBlock.cid })
       await this.putBlock(block)
       return block

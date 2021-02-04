@@ -1,5 +1,6 @@
 <script>
   import Create from './create.svelte'
+  import Playground from './playground.svelte'
 </script>
 
 <style>
@@ -22,8 +23,6 @@ ipsql-docs :global(.doc-container) {
 </style>
 
 <ipsql-docs>
-  <Create class="doc-container" createSelector="ipsql-docs" />
-  <sep />
-  <Create class="doc-container" createSelector="ipsql-docs" sql="CREATE TABLE test (id INT)"/>
-  <sep />
+  <Playground />
+
 </ipsql-docs>
