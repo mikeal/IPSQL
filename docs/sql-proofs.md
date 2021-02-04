@@ -76,7 +76,7 @@ Since these data structures are a collection of hashed binary blocks we have gre
 checks to protect against consistency issues.
 
 The deterministic btrees we use have lock-free threaded mutations for all of our write operations.
-Since they are a one-way function transform SQL proofs can also be merged together in concurrent
+Since they are a one-way functional transform SQL proofs can also be merged together in concurrent
 pairs like a CRDT.
 
 ## Separating concerns
