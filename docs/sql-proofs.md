@@ -105,7 +105,7 @@ these proofs are designed to produce data structures that can be easily commuted
 
 ## Deterministic B-Trees
 
-For a complete description of the tree design you can read [this post](https://0fps.net/2020/12/19/peer-to-peer-ordered-search-indexes/) by Mikola Lysenko. TLDR; B-Trees tends to suffer from hystersis which makes them
+For a complete description of the tree design you can read [this post](https://0fps.net/2020/12/19/peer-to-peer-ordered-search-indexes/) by Mikola Lysenko. TLDR; B-Trees tends to suffer from hysteresis which makes them
 non-derministic and therefor rather problemtic in hash linked data structures.
 
 Our deterministic b-trees have a numbers of features that are important to keep in mind:
