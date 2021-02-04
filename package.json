@@ -46,6 +46,12 @@
     },
     "./json-import": {
       "import": "./src/json-import.js"
+    },
+    "./memory": {
+      "import": "./src/stores/inmemory.js"
+    },
+    "./s3": {
+      "import": "./src/stores/s3.js"
     }
   },
   "devDependencies": {
