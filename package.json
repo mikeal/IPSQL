@@ -13,6 +13,7 @@
     "build:bin": "cp -R cli/bin.js dist/esm/cli/bin.js",
     "build:components": "cd components && npm install && npm build",
     "lint": "standard",
+    "vendor": "npx brrp@latest --install node-sql-parser > vendor/node-sql-parser.js",
     "test:cjs": "npm run build && mocha dist/cjs/node-test/test-*.js",
     "test:node": "mocha test/test-*.js",
     "test:cjs:browser": "polendina --cleanup dist/cjs/browser-test/test-*.js",

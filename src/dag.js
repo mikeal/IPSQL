@@ -1,4 +1,4 @@
-import sql from 'node-sql-parser'
+import sql from '../vendor/node-sql-parser.js'
 import { Table, Row, Column, registry } from './table.js'
 import { encode, mf } from './utils.js'
 

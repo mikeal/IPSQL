@@ -1,4 +1,4 @@
-import sql from 'node-sql-parser'
+import sql from '../vendor/node-sql-parser.js'
 import { SQLBase, getNode } from './utils.js'
 import { CIDCounter } from 'chunky-trees/utils'
 import { createTable, Table, Where } from './table.js'
