@@ -63,7 +63,6 @@ Options:
     - [ ] TEXT (may never support, according to spec this is upt 2GB of string data so it's hard
                 to figure out what the inline vs linking rules would be. Instead, using VARCHAR
                 as the inlined string and BLOB the *probably* linked type)
-    - [ ] BOOLEAN (this isn't actually supported in the SQL parser we use, must be quite rare)
 - [ ] ALTER TABLE
 - INSERT
   - [x] ROWS `INSERT INTO table_name VALUES ( 'test' )`
