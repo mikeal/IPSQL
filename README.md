@@ -105,7 +105,7 @@ Options:
 
 ### IPLD Schema
 
-```sh
+```ipldsch
 type Column {
   schema &Map
   index nullable &DBIndex
